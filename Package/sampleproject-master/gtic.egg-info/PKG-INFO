@@ -1,0 +1,17 @@
+Metadata-Version: 1.1
+Name: gtic
+Version: 1.0.1
+Summary: General Takeuchi Information Criterion
+Home-page: https://github.com/dem123456789
+Author: Enmao Diao
+Author-email: diao_em@hotmail.com
+License: All Rights Reserved
+Description: General Takeuchi Information Criterion(GTIC)
+Keywords: Model selection,Cross-validation
+Platform: UNKNOWN
+Classifier: Development Status :: 5 - Production/Stable
+Classifier: Intended Audience :: Developers
+Classifier: Topic :: Scientific/Engineering :: Artificial Intelligence
+Classifier: License :: Free for non-commercial use
+Classifier: Programming Language :: Python :: 2.7
+Classifier: Programming Language :: Python :: 3.6
