@@ -1,1 +1,0 @@
-General Takeuchi Information Criterion(GTIC)
