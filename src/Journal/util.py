@@ -2,6 +2,8 @@ import pickle
 import time
 import torch
 import os
+import shutil
+import zipfile
 import numpy as np
 import seaborn as sns
 from torch.autograd import Variable
@@ -45,6 +47,26 @@ def print_model(model):
     for p in model.parameters():
         print(p)
     return
+
+def zip_dir(paths,zip_name):
+    dirname = os.path.dirname(zip_name)
+    if not os.path.exists(dirname):
+        os.makedirs(dirname, exist_ok=True)
+    zipf = zipfile.ZipFile(zip_name, 'w', zipfile.ZIP_DEFLATED)
+    for i in range(len(paths)):
+        path = paths[i]
+        for root, dirs, files in os.walk(path):
+            for file in files:
+                zipf.write(os.path.relpath(os.path.join(root, file), os.path.join(path, '..')))
+    zipf.close()
+    return
+        
+def remove_dir(paths):
+    for i in range(len(paths)):
+        path = paths[i]
+        if os.path.exists(path):
+            shutil.rmtree(path)
+    return 
     
 def get_correct_cnt(output,target,ifcuda):
     max_index = output.max(dim = 1)[1]  
@@ -63,7 +85,7 @@ def get_data_dist(data):
     plt.hist(data)
     plt.show()
 
-def gen_input_features_LogisticRegression(dims,init_size=None,step_size=None,ifcovered=None,start_point=None):
+def gen_input_features_Linear(dims,init_size=None,step_size=None,ifcovered=None,start_point=None):
     if (init_size is None):
         init_size=[2]*len(dims) 
     if (step_size is None):

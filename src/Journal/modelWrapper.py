@@ -32,3 +32,22 @@ class modelWrapper:
         elif(self.optimizer_name=='LBFGS'):
             self.optimizer = torch.optim.LBFGS(self.model.parameters(),self.optimizer_param['lr'],self.optimizer_param['max_iter'],self.optimizer_param['max_eval'],
             self.optimizer_param['tolerance_grad'],self.optimizer_param['tolerance_change'],self.optimizer_param['history_size'],self.optimizer_param['line_search_fn'])
+			
+def gen_modelwrappers(models,optimizer_param,optimizer_name='SGD'):
+    modelwrappers = []
+    for i in range(len(models)):
+        mw = modelWrapper(models[i])
+        mw.set_optimizer_name(optimizer_name)
+        mw.set_optimizer_param(optimizer_param)
+        mw.wrap()
+        modelwrappers.append(mw)
+    return modelwrappers
+        
+        
+def unpack_modelwrappers(modelwrappers):
+    models = []
+    optimizer = []
+    for i in range(len(modelwrappers)):
+        models.append(modelwrappers[i].model)
+        optimizer.append(modelwrappers[i].optimizer)
+    return models,optimizer

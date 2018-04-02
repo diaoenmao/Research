@@ -29,9 +29,14 @@ from data import *
 # plt.pause(10000)
 
 
+paths=['model','output']
+zip_name = './tmp/Experiment_{}.zip'.format(100)
+zip_dir(paths,zip_name)
+#remove_dir(paths)
+
 #'Base_1','AIC_1','BIC_1','BC_1','CrossValidation_1','CrossValidation_3','CrossValidation_10','GTIC_1','Lasso_1','Ridge_1','ElasticNet_1','GREG_1'
-mode = 'BIC_1'
-selected_model_id,best_model_id,selected_model_test_loss,best_model_test_loss,selected_model_test_acc,best_model_test_acc,efficiency,timing = load('./output/Experiment_{}.pkl'.format(mode))
-print(efficiency)
-print(np.mean(efficiency[efficiency!=0]))
-print(np.std(efficiency[efficiency!=0]))
+# mode = 'BIC_1'
+# selected_model_id,best_model_id,selected_model_test_loss,best_model_test_loss,selected_model_test_acc,best_model_test_acc,efficiency,timing = load('./output/Experiment_{}.pkl'.format(mode))
+# print(efficiency)
+# print(np.mean(efficiency[efficiency!=0]))
+# print(np.std(efficiency[efficiency!=0]))

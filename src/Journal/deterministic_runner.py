@@ -9,14 +9,13 @@ from modelselect import *
 from runner import *
 
 
-class full_runner(runner):
+class deterministic_runner(runner):
     
     def __init__(self, id, data, modelwrappers, criterion, ifcuda = True, verbose = True, ifsave = True):
         super().__init__(id, data, modelwrappers, criterion, ifcuda, verbose, ifsave)
         self.num_models = len(self.modelwrappers)
         
-        self.mode = 'CrossValidation_1'
-        self.modename = 'CrossValidation'
+        self.mode = 'CrossValidation'
         self.input_datatype = torch.FloatTensor
         self.target_datatype = torch.LongTensor
         self.max_num_epochs = 5
@@ -79,9 +78,7 @@ class full_runner(runner):
                 self.finalized_models.append(finalized_model)
                 _,_,ms_loss_batch = self.tester(train_tensorset,self.finalized_models[i],self.criterion,cur_TAG) 
                 self.modelselect_loss.append(ms_loss_batch)
-            print(torch.mean(self.modelselect_loss[0]))
             self.modelselect_loss = self.regularize_loss(self.dataSizes,self.finalized_models,self.modelselect_loss,self.mode,False)    
-            print(self.modelselect_loss)
             self.selected_model_id = np.argmin(self.modelselect_loss)
             
     def test(self):

@@ -23,7 +23,7 @@ def fetch_data_mld(dataSize=70000,randomGen = np.random.RandomState(seed)):
     print('data ready')
     return X, y
 
-def fetch_data_logistic(dataSize=1000,degree=100,coef=1,randomGen = np.random.RandomState(seed)):
+def fetch_data_logistic(dataSize=1000,degree=100,coef=1.5,randomGen = np.random.RandomState(seed)):
     print('fetching data...') 
     X = randomGen.randn(dataSize,degree)
     beta = 10 / np.power(range(1,degree+1),coef)
@@ -67,15 +67,15 @@ def split_data_kfold(X,y,K,randomGen = np.random.RandomState(seed)):
     
 def split_data_loo(X,y,randomGen = np.random.RandomState(seed)):    
     dataSize = X.shape[0]
-    X_train, X_val, X_test, y_train, y_val, y_test = split_data_kfold(X,y,dataSize,randomGen = randomGen)
+    X_train, X_val, y_train, y_val = split_data_kfold(X,y,dataSize,randomGen = randomGen)
     return X_train, X_val, y_train, y_val
     
 def split_data_CrossValidation(X,y,K,p=0.75,randomGen = np.random.RandomState(seed)):
-    if(np.int(K) == 1):
+    if(K == 1):
         X_train, X_val, y_train, y_val  = split_data_holdout(X,y,p,randomGen = randomGen)
-    elif(np.int(K) < X.shape[0] and np.int(K) > 1):
+    elif(K < X.shape[0] and K > 1):
         X_train, X_val, y_train, y_val = split_data_kfold(X,y,K,randomGen = randomGen)
-    elif(np.int(K) == X.shape[0]):
+    elif(K == X.shape[0]):
         X_train, X_val, y_train, y_val = split_data_loo(X,y,randomGen = randomGen)
     else:
         print('Invalid K Fold')
@@ -91,11 +91,12 @@ def filter_data(X,y,valid_target):
         y_filtered[y_filtered==valid_target[i]] = i
     return X_filtered, y_filtered
 
-def gen_data_LogisticRegression(X,y,K,p,input_features,randomGen = np.random.RandomState(seed)):
+def gen_data_Linear(X,y,K,p,input_features,randomGen = np.random.RandomState(seed)):
+    num_candidate_models = len(input_features)
     X_final_all, X_test_all, y_final, y_test = split_data_p(X,y,p=p,randomGen = randomGen)
     X_train_CV, X_val_CV, y_train, y_val = split_data_CrossValidation(X_final_all,y_final,K,randomGen = randomGen)  
     X_train, X_val, X_final, X_test = [],[],[],[]
-    for i in range(len(input_features)):
+    for i in range(num_candidate_models):
         X_train_Model, X_val_Model = [],[]
         for k in range(K):
             X_train_Model.append(X_train_CV[k][:,input_features[i]])
@@ -104,6 +105,21 @@ def gen_data_LogisticRegression(X,y,K,p,input_features,randomGen = np.random.Ran
         X_val.append(X_val_Model)
         X_final.append(X_final_all[:,input_features[i]])
         X_test.append(X_test_all[:,input_features[i]])
+    return X_train, X_val, X_final, X_test, y_train, y_val, y_final, y_test
+
+def gen_data_Full(X,y,K,p,num_candidate_models,randomGen = np.random.RandomState(seed)):
+    X_final_all, X_test_all, y_final, y_test = split_data_p(X,y,p=p,randomGen = randomGen)
+    X_train_CV, X_val_CV, y_train, y_val = split_data_CrossValidation(X_final_all,y_final,K,randomGen = randomGen)  
+    X_train, X_val, X_final, X_test = [],[],[],[]
+    for i in range(num_candidate_models):
+        X_train_Model, X_val_Model = [],[]
+        for k in range(K):
+            X_train_Model.append(X_train_CV[k])
+            X_val_Model.append(X_val_CV[k])
+        X_train.append(X_train_Model)
+        X_val.append(X_val_Model)
+        X_final.append(X_final_all)
+        X_test.append(X_test_all)
     return X_train, X_val, X_final, X_test, y_train, y_val, y_final, y_test
     
 def get_data_stats(input,target=None,TAG=''):
