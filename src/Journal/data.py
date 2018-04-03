@@ -4,7 +4,7 @@ import torch.utils.data as data_utils
 from sklearn.utils import shuffle
 from sklearn.datasets import fetch_mldata
 from sklearn.model_selection import train_test_split
-from sklearn.model_selection import StratifiedKFold
+from sklearn.model_selection import KFold
 from torch.utils.data import DataLoader
 from util import *
 
@@ -53,7 +53,7 @@ def split_data_holdout(X,y,p=0.75,randomGen = np.random.RandomState(seed)):
     return [X_train], [X_val], [y_train], [y_val]
     
 def split_data_kfold(X,y,K,randomGen = np.random.RandomState(seed)):
-    kfold = StratifiedKFold(n_splits=K, random_state=randomGen)
+    kfold = KFold(n_splits=K, random_state=randomGen)
     X_train = []
     y_train = []
     X_val = []
@@ -94,6 +94,8 @@ def filter_data(X,y,valid_target):
 def gen_data_Linear(X,y,K,p,input_features,randomGen = np.random.RandomState(seed)):
     num_candidate_models = len(input_features)
     X_final_all, X_test_all, y_final, y_test = split_data_p(X,y,p=p,randomGen = randomGen)
+    if(K == 'loo'):
+        K = X_final_all.shape[0]
     X_train_CV, X_val_CV, y_train, y_val = split_data_CrossValidation(X_final_all,y_final,K,randomGen = randomGen)  
     X_train, X_val, X_final, X_test = [],[],[],[]
     for i in range(num_candidate_models):

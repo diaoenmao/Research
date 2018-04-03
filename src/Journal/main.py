@@ -12,8 +12,8 @@ from deterministic_runner import *
 
 def main():   
    
-    #mode = ['Base','AIC','BIC','BC','CrossValidation_1','CrossValidation_3','CrossValidation_10','GTIC','Lasso','Ridge','ElasticNet','GREG']
-    mode = ['Base','AIC','BIC','BC','CrossValidation_1','CrossValidation_3','CrossValidation_10','GTIC']
+    #mode = ['Base','AIC','BIC','BC','CrossValidation_1','CrossValidation_3','CrossValidation_10','CrossValidation_loo','GTIC','Lasso','Ridge','ElasticNet','GREG']
+    mode = ['Base','AIC','BIC','BC','CrossValidation_1','CrossValidation_3','CrossValidation_10','CrossValidation_loo','GTIC']
     num_Experiments = 100
     dataSize = [1000,2000,3000,4000,5000]
 
@@ -34,7 +34,7 @@ def run_Experiment(dataSize,mode,num_Experiments):
     best_model_test_acc = np.zeros(len(seeds))
     efficiency = np.zeros(len(seeds))
     timing = np.zeros(len(seeds))
-    remove_dir(['model','output'])
+    remove_dir(['data/stats','model','output'])
     for d in range(len(dataSize)):
         for m in range(len(mode)):
             for i in range(len(seeds)):
@@ -56,8 +56,6 @@ def parse_mode(mode,dataSize):
         mode,K = mode.split('_')
         if(K!='loo'): 
             K = np.int(K)
-        else:
-            K = dataSize
     else:
         mode = mode
         K = 1
