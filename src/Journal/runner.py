@@ -13,13 +13,12 @@ class runner:
     
     regulazition_supported = ['Base','AIC','BIC','BC','GTIC','Lasso','Ridge','ElasticNet','GREG']
     
-    def __init__(self, id, data, modelwrappers, criterion, ifcuda = True, verbose = True, ifsave = True):
+    def __init__(self, id, data, modelwrappers, ifcuda = True, verbose = True, ifsave = True):
 
         self.id = id
         self.data = data
         self.modelwrappers = modelwrappers
         self.num_models = len(self.modelwrappers)
-        self.criterion = criterion
         self.ifcuda = ifcuda
         self.verbose = verbose
         self.ifsave = ifsave

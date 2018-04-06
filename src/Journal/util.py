@@ -1,7 +1,11 @@
 import pickle
 import time
 import torch
+import itertools
 import os
+import gc
+import sys
+import psutil
 import shutil
 import zipfile
 import numpy as np
@@ -85,15 +89,14 @@ def get_data_dist(data):
     plt.hist(data)
     plt.show()
 
-def gen_input_features_Linear(dims,init_size=None,step_size=None,ifcovered=None,start_point=None):
+def gen_input_features(dims,init_size=None,step_size=None,start_point=None):
     if (init_size is None):
         init_size=[2]*len(dims) 
     if (step_size is None):
         step_size = [1]*len(dims) 
-    if (ifcovered is None):
-        ifcovered = [False]*len(dims)
     if (start_point is None):
         start_point = [np.int(dims[i]/2) for i in range(len(dims))] 
+    ifcovered = [False]*len(dims)
     input_features = []
     j = 0
     while(not np.all(ifcovered)):
@@ -113,6 +116,40 @@ def gen_input_features_Linear(dims,init_size=None,step_size=None,ifcovered=None,
         
     return input_features
 
+def gen_hidden_layers(max_num_nodes,init_size=None,step_size=None):
+    if (init_size is None):
+        init_size=[1]*len(max_num_nodes) 
+    if (step_size is None):
+        step_size = [1]*len(max_num_nodes)
+    num_nodes = []
+    hidden_layers = []
+    for i in range(len(max_num_nodes)):
+        num_nodes.append(list(range(init_size[i],max_num_nodes[i]+1,step_size[i])))
+    while(len(num_nodes) != 0):
+        hidden_layers.extend(list(itertools.product(*num_nodes)))
+        del num_nodes[-1]   
+    return hidden_layers
+
+# ===================Memory===================== 
+def memReport():
+    for obj in gc.get_objects():
+        if torch.is_tensor(obj):
+            print(type(obj), obj.size())
+    
+def cpuStats():
+        print(sys.version)
+        print(psutil.cpu_percent())
+        print(psutil.virtual_memory())  # physical memory usage
+        pid = os.getpid()
+        py = psutil.Process(pid)
+        memoryUse = py.memory_info()[0] / 2. ** 30  # memory use in GB...I think
+        print('memory GB:', memoryUse)
+
+def gpuStats(device=0):
+    gpu_stats = gpustat.GPUStatCollection.new_query()
+    item = gpu_stats.jsonify()["gpus"][device]
+    print("{}/{}".format(item["memory.used"], item["memory.total"]))
+    
 # ===================Function===================== 
 def p_inverse(A):
     pinv = (A.t().matmul(A)).inverse().matmul(A.t())

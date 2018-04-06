@@ -2,7 +2,7 @@ import numpy as np
 import torch
 import torch.utils.data as data_utils
 from sklearn.utils import shuffle
-from sklearn.datasets import fetch_mldata
+from sklearn import datasets
 from sklearn.model_selection import train_test_split
 from sklearn.model_selection import KFold
 from torch.utils.data import DataLoader
@@ -14,12 +14,14 @@ mld_dataName = 'MNIST original'
 mld_data_dir = './data/'
 seed = 1234
 
-def fetch_data_mld(dataSize=70000,randomGen = np.random.RandomState(seed)):
+def fetch_data_mld(dataSize=70000,valid_target=np.arange(10),randomGen = np.random.RandomState(seed)):
     print('fetching data...')
-    data = fetch_mldata(mld_dataName, data_home=mld_data_dir)
+    data = datasets.fetch_mldata(mld_dataName, data_home=mld_data_dir)
     X = data.data
     y = data.target
-    X,y = sample_data(dataSize,X,y,randomGen=randomGen)
+    X,y = filter_data(X,y,valid_target)
+    if(dataSize!=None):
+        X,y = sample_data(dataSize,X,y,randomGen=randomGen)
     print('data ready')
     return X, y
 
@@ -33,6 +35,12 @@ def fetch_data_logistic(dataSize=1000,degree=100,coef=1.5,randomGen = np.random.
     print('data ready')
     return X, y
 
+def fetch_data_circle(dataSize=1000,noise=0.1,factor=0.7,randomGen=np.random.RandomState(seed)):
+    print('fetching data...') 
+    X, y = datasets.make_circles(n_samples=dataSize, shuffle=False, noise=noise, random_state=randomGen, factor=factor)
+    print('data ready')  
+    return X, y
+    
 def sample_data(dataSize,X,y,randomGen = np.random.RandomState(seed)):
     if(dataSize<=X.shape[0]):
         sampled_X, sampled_y = shuffle(X, y, n_samples=dataSize, random_state=randomGen)
@@ -42,14 +50,15 @@ def sample_data(dataSize,X,y,randomGen = np.random.RandomState(seed)):
     return sampled_X, sampled_y
 
 
-def split_data_p(X,y,p=0.80,randomGen = np.random.RandomState(seed)):
+def split_data_p(X,y,test_size=0.80,randomGen = np.random.RandomState(seed)):
     dataSize = X.shape[0]
-    test_size = np.int(dataSize*(1-p))
+    if(test_size>0 and test_size<1):
+        test_size = np.int(dataSize*(1-test_size))
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size, stratify = y,random_state=randomGen)
     return X_train, X_test, y_train, y_test
 
-def split_data_holdout(X,y,p=0.75,randomGen = np.random.RandomState(seed)):
-    X_train, X_val, y_train, y_val = split_data_p(X,y,p=p,randomGen = randomGen)
+def split_data_holdout(X,y,test_size=0.75,randomGen = np.random.RandomState(seed)):
+    X_train, X_val, y_train, y_val = split_data_p(X,y,test_size=test_size,randomGen = randomGen)
     return [X_train], [X_val], [y_train], [y_val]
     
 def split_data_kfold(X,y,K,randomGen = np.random.RandomState(seed)):
@@ -70,9 +79,9 @@ def split_data_loo(X,y,randomGen = np.random.RandomState(seed)):
     X_train, X_val, y_train, y_val = split_data_kfold(X,y,dataSize,randomGen = randomGen)
     return X_train, X_val, y_train, y_val
     
-def split_data_CrossValidation(X,y,K,p=0.75,randomGen = np.random.RandomState(seed)):
+def split_data_CrossValidation(X,y,K,test_size=0.75,randomGen = np.random.RandomState(seed)):
     if(K == 1):
-        X_train, X_val, y_train, y_val  = split_data_holdout(X,y,p,randomGen = randomGen)
+        X_train, X_val, y_train, y_val  = split_data_holdout(X,y,test_size,randomGen = randomGen)
     elif(K < X.shape[0] and K > 1):
         X_train, X_val, y_train, y_val = split_data_kfold(X,y,K,randomGen = randomGen)
     elif(K == X.shape[0]):
@@ -91,9 +100,9 @@ def filter_data(X,y,valid_target):
         y_filtered[y_filtered==valid_target[i]] = i
     return X_filtered, y_filtered
 
-def gen_data_Linear(X,y,K,p,input_features,randomGen = np.random.RandomState(seed)):
+def gen_data_Linear(X,y,K,test_size,input_features,randomGen = np.random.RandomState(seed)):
     num_candidate_models = len(input_features)
-    X_final_all, X_test_all, y_final, y_test = split_data_p(X,y,p=p,randomGen = randomGen)
+    X_final_all, X_test_all, y_final, y_test = split_data_p(X,y,test_size=test_size,randomGen = randomGen)
     if(K == 'loo'):
         K = X_final_all.shape[0]
     X_train_CV, X_val_CV, y_train, y_val = split_data_CrossValidation(X_final_all,y_final,K,randomGen = randomGen)  
@@ -109,8 +118,8 @@ def gen_data_Linear(X,y,K,p,input_features,randomGen = np.random.RandomState(see
         X_test.append(X_test_all[:,input_features[i]])
     return X_train, X_val, X_final, X_test, y_train, y_val, y_final, y_test
 
-def gen_data_Full(X,y,K,p,num_candidate_models,randomGen = np.random.RandomState(seed)):
-    X_final_all, X_test_all, y_final, y_test = split_data_p(X,y,p=p,randomGen = randomGen)
+def gen_data_Full(X,y,K,test_size,num_candidate_models,randomGen = np.random.RandomState(seed)):
+    X_final_all, X_test_all, y_final, y_test = split_data_p(X,y,test_size=test_size,randomGen = randomGen)
     X_train_CV, X_val_CV, y_train, y_val = split_data_CrossValidation(X_final_all,y_final,K,randomGen = randomGen)  
     X_train, X_val, X_final, X_test = [],[],[],[]
     for i in range(num_candidate_models):

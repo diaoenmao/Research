@@ -11,10 +11,8 @@ from runner import *
 
 class deterministic_runner(runner):
     
-    def __init__(self, id, data, modelwrappers, criterion, ifcuda = True, verbose = True, ifsave = True):
-        super().__init__(id, data, modelwrappers, criterion, ifcuda, verbose, ifsave)
-        self.num_models = len(self.modelwrappers)
-        
+    def __init__(self, id, data, modelwrappers, ifcuda = True, verbose = True, ifsave = True):
+        super().__init__(id, data, modelwrappers, ifcuda, verbose, ifsave)      
         self.mode = 'CrossValidation'
         self.input_datatype = torch.FloatTensor
         self.target_datatype = torch.LongTensor
@@ -48,10 +46,12 @@ class deterministic_runner(runner):
                     get_data_stats(X_train[i][k],TAG=cur_TAG)
                     train_tensorset = get_data_tensorset(X_train[i][k],y_train[k],self.input_datatype,self.target_datatype)
                     val_tensorset = get_data_tensorset(X_val[i][k],y_val[k],self.input_datatype,self.target_datatype)
-                    _,_,tmp_model = self.trainer(train_tensorset,self.modelwrappers[i].copy(),self.criterion,self.mode,cur_TAG)
-                    self.validated_model_loss[i,k],_,_ = self.tester(val_tensorset,tmp_model,self.criterion,cur_TAG)
+                    copied_mw = self.modelwrappers[i].copy()
+                    _,_,tmp_model = self.trainer(train_tensorset,copied_mw,self.mode,cur_TAG)
+                    self.validated_model_loss[i,k],_,_ = self.tester(val_tensorset,tmp_model,copied_mw.criterion,cur_TAG)
                     if(ifshow):
-                        showLoss(self.max_num_epochs,['train','val'],cur_TAG)        
+                        showLoss(self.max_num_epochs,['train','val'],cur_TAG)
+
             self.modelselect_loss = np.mean(self.validated_model_loss,axis=1)
             self.selected_model_id = np.argmin(self.modelselect_loss)
                      
@@ -61,22 +61,24 @@ class deterministic_runner(runner):
                 cur_TAG = TAG + '_{}_final'.format(i)
                 get_data_stats(X_final[i],TAG=cur_TAG)           
                 train_loader = get_data_tensorset(X_final[i],y_final,self.input_datatype,self.target_datatype)
-                self.trainer(train_loader,self.modelwrappers[i].copy(),self.criterion,self.mode,cur_TAG)
-                
+                copied_mw = self.modelwrappers[i].copy()
+                self.trainer(train_loader,copied_mw,self.mode,cur_TAG)
+
         elif(self.mode in self.regulazition_supported):                                        
             print('Finalizing...')
             self.dataSizes = np.zeros(self.num_models)
             self.modelselect_loss = []
             self.finalized_models = []
             for i in range(self.num_models):  
-                print(X_final[i].shape)             
+                print(X_final[i].shape)
                 cur_TAG = TAG + '_{}_final'.format(i)
                 self.dataSizes[i] = X_final[i].shape[0]
                 get_data_stats(X_final[i],TAG=cur_TAG)           
                 train_tensorset = get_data_tensorset(X_final[i],y_final,self.input_datatype,self.target_datatype)
-                _,_,finalized_model = self.trainer(train_tensorset,self.modelwrappers[i].copy(),self.criterion,self.mode,cur_TAG)
+                copied_mw = self.modelwrappers[i].copy()
+                _,_,finalized_model = self.trainer(train_tensorset,copied_mw,self.mode,cur_TAG)
                 self.finalized_models.append(finalized_model)
-                _,_,ms_loss_batch = self.tester(train_tensorset,self.finalized_models[i],self.criterion,cur_TAG) 
+                _,_,ms_loss_batch = self.tester(train_tensorset,self.finalized_models[i],copied_mw.criterion,cur_TAG) 
                 self.modelselect_loss.append(ms_loss_batch)
             self.modelselect_loss = self.regularize_loss(self.dataSizes,self.finalized_models,self.modelselect_loss,self.mode,False)    
             self.selected_model_id = np.argmin(self.modelselect_loss)
@@ -89,7 +91,8 @@ class deterministic_runner(runner):
         for i in range(self.num_models):
             cur_TAG = TAG + '_{}_final'.format(i)
             test_tensorset = get_data_tensorset(X_test[i],y_test,self.input_datatype,self.target_datatype)
-            self.final_model_test_loss[i], self.final_model_test_acc[i],_ = self.tester(test_tensorset,self.modelwrappers[i].copy().model,self.criterion,cur_TAG)  
+            copied_mw = self.modelwrappers[i].copy()
+            self.final_model_test_loss[i], self.final_model_test_acc[i],_ = self.tester(test_tensorset,copied_mw.model,copied_mw.criterion,cur_TAG)  
         self.best_model_id = np.argmin(self.final_model_test_loss)
         self.final_selected_model_test_loss = self.final_model_test_loss[self.selected_model_id]
         self.final_best_model_test_loss = np.min(self.final_model_test_loss)
@@ -105,7 +108,7 @@ class deterministic_runner(runner):
     def get_output(self):
         return self.selected_model_id,self.best_model_id,self.final_selected_model_test_loss,self.final_best_model_test_loss,self.final_selected_model_test_acc,self.final_best_model_test_acc,self.efficiency
         
-    def trainer(self,train_tensorset,modelwrapper,criterion,mode,TAG=""):
+    def trainer(self,train_tensorset,modelwrapper,mode,TAG=""):
         print("Training ...")
         model = modelwrapper.model
         #print_model(model)
@@ -126,7 +129,7 @@ class deterministic_runner(runner):
                 optimizer.zero_grad()
                 # ===================forward=====================
                 output = model(input)
-                loss_batch = criterion(output, target)               
+                loss_batch = modelwrapper.criterion(output, target)               
                 train_acc_iter.append(get_acc(output,target,self.ifcuda))
                 # ===================backward====================
                 if(self.ifregularize):
@@ -167,7 +170,7 @@ class deterministic_runner(runner):
         target = to_var(target,self.ifcuda)
         test_loss = 0
         test_acc = 0
-        print('./model/model_{}.pth'.format(TAG))
+        print('./model/model_{}_{}.pth'.format(self.max_num_epochs-1,TAG))
         model = load_model(model,self.ifcuda,'./model/model_{}_{}.pth'.format(self.max_num_epochs-1,TAG))
         #print_model(model)
         model = model.eval()
@@ -182,8 +185,9 @@ class deterministic_runner(runner):
         print("Elapsed Time for one epoch: %.3f" % (e-s))
         print('loss:{}, acc:{:.4f}'
             .format(test_loss, test_acc))
-        save([test_loss],'./output/test/loss_{}.pkl'.format(TAG))
-        save([test_acc],'./output/test/acc_{}.pkl'.format(TAG))
+        if(self.ifsave):
+            save([test_loss],'./output/test/loss_{}.pkl'.format(TAG))
+            save([test_acc],'./output/test/acc_{}.pkl'.format(TAG))
         return test_loss,test_acc,test_loss_batch
     
     
