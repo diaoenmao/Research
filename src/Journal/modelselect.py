@@ -145,6 +145,7 @@ def get_GTIC(dataSize,model,loss_batch):
     J = torch.sum(J_batch,dim=0)
     J = J[non_zero_idx,non_zero_idx.view(1,-1)]   
     J = J/dataSize
+    #print(J)
     H = []
     for j in sum_free_grad_params:
         h = torch.autograd.grad(j, model.parameters(), create_graph=True)
@@ -154,22 +155,24 @@ def get_GTIC(dataSize,model,loss_batch):
     free_vec_parameters_idx = get_free_vec_parameters_idx(model)
     H = H[:,free_vec_parameters_idx]
     H = H[non_zero_idx,non_zero_idx.view(1,-1)]
+    #print(H)
     V = -H/dataSize
     try:
         inv_V = torch.inverse(V)
+        #print(inv_V)
         VmJ = torch.matmul(inv_V,J)
         tVMJ = torch.trace(VmJ)
         print('effective num of paramters')
-        print(tVMJ)
+        print(tVMJ.data[0])
         GTIC = tVMJ/dataSize
-        if(GTIC.data[0]<0):
+        if(GTIC.data[0]<0 or np.isnan(tVMJ.data[0])):
             print('numerically unstable')
             # print(J)
             # print(H)
             # print(inv_V)
             GTIC = 65535
     except RuntimeError as e:
-        print('numerically unstable')
+        print('numerically unstable, not invertable')
         # print(e)
         # print(J)
         # print(H)

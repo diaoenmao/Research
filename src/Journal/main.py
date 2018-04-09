@@ -15,14 +15,14 @@ def main():
    
     #mode = ['Base','AIC','BIC','BC','CrossValidation_1','CrossValidation_3','CrossValidation_10','CrossValidation_loo','GTIC','Lasso','Ridge','ElasticNet','GREG']
     config.init()
-    mode = ['Base']
+    mode = ['GTIC']
     num_Experiments = 1
-    dataSize = [5000]
+    dataSize = [1000]
 
     run_Experiment(dataSize,mode,num_Experiments)
-    mean,std = process_output(dataSize,mode)
+    mean,stderr = process_output(dataSize,mode)
     print(mean)
-    print(std)
+    print(stderr)
 
 
             
@@ -68,15 +68,15 @@ def parse_mode(mode,dataSize):
 def process_output(dataSize,mode):
     keys = ['selected_model_id','best_model_id','selected_model_test_loss','best_model_test_loss','selected_model_test_acc','best_model_test_acc','efficiency','timing']
     mean = {k: np.zeros((len(dataSize),len(mode))) for k in keys}
-    std = {k: np.zeros((len(dataSize),len(mode))) for k in keys}
+    stderr = {k: np.zeros((len(dataSize),len(mode))) for k in keys}
     for d in range(len(dataSize)):
         for m in range(len(mode)):
             result = load('./result/Experiment_{}_{}.pkl'.format(dataSize[d],mode[m]))
             for i in range(len(keys)):
                 mean[keys[i]][d,m] = np.mean(result[i])
-                std[keys[i]][d,m] = np.std(result[i])
-    save([mean,std,dataSize,mode],'./result/final.pkl')
-    return mean,std
+                stderr[keys[i]][d,m] = np.std(result[i])/np.sqrt(result[i].shape[0])
+    save([mean,stderr,dataSize,mode],'./result/final.pkl')
+    return mean,stderr
 
 def prepare_Linear(X,y,K,randomGen=None):
     init_size=None
