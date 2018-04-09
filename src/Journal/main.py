@@ -15,9 +15,9 @@ def main():
    
     #mode = ['Base','AIC','BIC','BC','CrossValidation_1','CrossValidation_3','CrossValidation_10','CrossValidation_loo','GTIC','Lasso','Ridge','ElasticNet','GREG']
     config.init()
-    mode = ['Base','GTIC']
+    mode = ['Base']
     num_Experiments = 1
-    dataSize = [1000]
+    dataSize = [5000]
 
     run_Experiment(dataSize,mode,num_Experiments)
     mean,std = process_output(dataSize,mode)
@@ -42,9 +42,9 @@ def run_Experiment(dataSize,mode,num_Experiments):
             for i in range(len(seeds)):
                 s = time.time()
                 randomGen = np.random.RandomState(seeds[i])
-                #X, y = fetch_data_logistic(dataSize[d],randomGen = randomGen)
+                X, y = fetch_data_logistic(dataSize[d],randomGen = randomGen)
                 #X, y = fetch_data_mld(dataSize[d],randomGen = randomGen) 
-                X, y = fetch_data_circle(dataSize[d],randomGen = randomGen) 
+                #X, y = fetch_data_circle(dataSize[d],randomGen = randomGen) 
                 selected_model_id[i],best_model_id[i],selected_model_test_loss[i],best_model_test_loss[i],selected_model_test_acc[i],best_model_test_acc[i],efficiency[i] = Experiment(i,X,y,mode[m],randomGen)
                 e = time.time()   
                 timing[i] = e-s
@@ -81,12 +81,12 @@ def process_output(dataSize,mode):
 def prepare_Linear(X,y,K,randomGen=None):
     init_size=None
     step_size=None
-    #start_point=[0]
-    start_point=None 
+    start_point=[0]
+    #start_point=None 
     dataSize = X.shape[0]   
     max_input_feature = np.int(np.sqrt(dataSize*config.PARAM['test_size'])) 
-    #dims = (max_input_feature,)
-    dims = (28,28)
+    dims = (max_input_feature,)
+    #dims = (28,28)
     input_features = gen_input_features(dims,init_size=init_size,step_size=step_size,start_point=start_point)
     
     num_candidate_models = len(input_features)
@@ -119,8 +119,8 @@ def Experiment(id,X,y,mode,randomGen=None):
     dataSize = X.shape[0]
     mode,K = parse_mode(mode,dataSize)
     
-    #data,modelwrappers=prepare_Linear(X,y,K,randomGen)
-    data,modelwrappers=prepare_MLP(X,y,K,randomGen)
+    data,modelwrappers = prepare_Linear(X,y,K,randomGen)
+    #data,modelwrappers = prepare_MLP(X,y,K,randomGen)
     
     print('Start Experiment {} of {}_{}_{}'.format(id,dataSize,mode,K))      
     r = deterministic_runner(id, data, modelwrappers, config.PARAM['ifcuda'], config.PARAM['verbose'], config.PARAM['ifsave'])

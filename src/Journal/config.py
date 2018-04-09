@@ -3,7 +3,7 @@ import torch
 def init():
     global PARAM
     PARAM = {
-        'optimizer_param': {'lr': 0.1},
+        'optimizer_param': {'lr': 0.8},
         'regularization_param': [0.001,0.001],
         'optimizer_name': 'LBFGS',
         'batch_size': 20,
@@ -11,7 +11,7 @@ def init():
         'verbose': True,
         'ifsave': True,
         'ifshow': False,
-        'ifregularize': False,
+        'ifregularize': True,
         'input_datatype': torch.FloatTensor,
         'target_datatype': torch.LongTensor,
         'max_num_epochs': 5,

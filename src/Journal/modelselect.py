@@ -73,16 +73,21 @@ def get_free_vec_parameters_idx(model):
     num_outputlayer_param = len(list(model.outputlayer.parameters()))
     free_param = param[:-num_outputlayer_param]
     count = 0
-    for i in range(len(free_param)):
-        count = count + torch.numel(free_param[i])
-    idx = torch.arange(count).type(torch.DoubleTensor).long()
+    idx = None
+    if(len(free_param)!=0):
+        for i in range(len(free_param)):
+            count = count + torch.numel(free_param[i])
+        idx = torch.arange(count).long()
     for p in outputlayer_param:
         if(p.size()[0]>1):
             cur_num_free_param = torch.numel(p[:-1,])
         else:
             cur_num_free_param = torch.numel(p)
         total_num_free_param = torch.numel(p)
-        idx = torch.cat((idx,torch.arange(count,count+cur_num_free_param).long()),dim=0)
+        if(idx is None):
+            idx = torch.arange(count,count+cur_num_free_param).long()
+        else:
+            idx = torch.cat((idx,torch.arange(count,count+cur_num_free_param).long()),dim=0)
         count = count+total_num_free_param
     if(next(model.parameters()).is_cuda):
         idx = idx.cuda()
@@ -132,59 +137,43 @@ def get_GTIC(dataSize,model,loss_batch):
         vec_free_grad_params = vec_free_grad_params.unsqueeze(0)
         l_vec_free_grad_params.append(vec_free_grad_params)       
     free_grad_params = torch.cat(l_vec_free_grad_params,dim=0)
-    print('free_grad_param')
-    print(free_grad_params)
+    sum_free_grad_params = torch.sum(free_grad_params,dim=0)
+    non_zero_idx = torch.nonzero(sum_free_grad_params[:,0])
+    non_zero_idx = non_zero_idx.data
     free_grad_params_T = free_grad_params.transpose(1,2)
     J_batch = torch.matmul(free_grad_params,free_grad_params_T)
     J = torch.sum(J_batch,dim=0)
-    print('J')
-    print(J)
+    J = J[non_zero_idx,non_zero_idx.view(1,-1)]   
     J = J/dataSize
-    sum_free_grad_params = torch.sum(free_grad_params,dim=0)
     H = []
     for j in sum_free_grad_params:
         h = torch.autograd.grad(j, model.parameters(), create_graph=True)
         h = vectorize_parameters(h).view(1,-1)   
         H.append(h)
     H = torch.cat(H,dim=0)
-    #print('H')
-    #print(H)
     free_vec_parameters_idx = get_free_vec_parameters_idx(model)
     H = H[:,free_vec_parameters_idx]
-    #print('H')
-    #print(H)
+    H = H[non_zero_idx,non_zero_idx.view(1,-1)]
     V = -H/dataSize
     try:
-        print('V')
-        print(V)
-        lam = torch.eye(V.size()[0])/(dataSize**2)
-        reg =  Variable(lam.cuda(),requires_grad=False)
-        print('V+reg')
-        print(V+reg)
-        inv_V = torch.inverse(V+reg)
-        print('inv_V')
-        print(inv_V)
+        inv_V = torch.inverse(V)
         VmJ = torch.matmul(inv_V,J)
-        print('VmJ')
-        print(VmJ)
         tVMJ = torch.trace(VmJ)
+        print('effective num of paramters')
         print(tVMJ)
         GTIC = tVMJ/dataSize
+        if(GTIC.data[0]<0):
+            print('numerically unstable')
+            # print(J)
+            # print(H)
+            # print(inv_V)
+            GTIC = 65535
     except RuntimeError as e:
-        print(e)
-        # print('V')
-        # print(V)
-        # lam = torch.eye(V.size()[0])*1e-16
-        # reg =  Variable(lam.cuda(),requires_grad=False)
-        # print('V+reg')
-        # print(V+reg)
-        # inv_V = torch.inverse(V+reg)
-        # print('inv_V')
-        # print(inv_V)
-        # VmJ = torch.matmul(inv_V,J)
-        # tVMJ = torch.trace(VmJ)
-        # print(tVMJ)
-        # GTIC = tVMJ/dataSize        
+        print('numerically unstable')
+        # print(e)
+        # print(J)
+        # print(H)
+        GTIC = 65535
     return GTIC
 
 def get_Lasso(model,regularization_param):

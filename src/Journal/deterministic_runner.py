@@ -82,6 +82,9 @@ class deterministic_runner(runner):
                 self.modelselect_loss.append(ms_loss_batch)
             self.modelselect_loss = self.regularize_loss(self.dataSizes,self.finalized_models,self.modelselect_loss,self.mode,False)    
             self.selected_model_id = np.argmin(self.modelselect_loss)
+        else:
+            print('mode not supported')
+            exit()
             
     def test(self):
         TAG = self.mode + '_' + str(self.K)
@@ -135,6 +138,7 @@ class deterministic_runner(runner):
                 if(self.ifregularize):
                     regularized_loss = self.regularize_loss(dataSize,model,loss_batch,mode,True)
                     train_loss_iter.append(float(regularized_loss))
+                    print(train_loss_iter[-1])
                     regularized_loss.backward()
                     return regularized_loss 
                 else:
