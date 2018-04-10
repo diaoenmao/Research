@@ -72,14 +72,14 @@ def remove_dir(paths):
             shutil.rmtree(path)
     return 
     
-def get_correct_cnt(output,target,ifcuda):
+def get_correct_cnt(output,target):
     max_index = output.max(dim = 1)[1]  
     correct_cnt = (max_index == target).float().sum()
     return correct_cnt
     
-def get_acc(output,target,ifcuda):
+def get_acc(output,target):
     max_index = output.max(dim = 1)[1]
-    correct_cnt = get_correct_cnt(output,target,ifcuda)
+    correct_cnt = get_correct_cnt(output,target)
     total_cnt = output.size()[0]
     acc = correct_cnt/total_cnt
     return acc

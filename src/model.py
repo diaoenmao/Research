@@ -1,7 +1,6 @@
 import torch
 import copy
 from torch import nn
-from modelWrapper import *
 
 class Linear(nn.Module):
     def __init__(self, in_features, out_features, ifclassification):
