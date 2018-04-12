@@ -15,9 +15,6 @@ def early_stopping(loss,min_delta=1e-2, patience=10):
                 return best_epoch_id
             patience_tracker = patience_tracker + 1
     return t
-
-# def count_parameters(model):
-    # return sum(p.numel() for p in model.parameters() if p.requires_grad)
     
 def vectorize_parameters(param):
     vec_params = []
@@ -26,70 +23,6 @@ def vectorize_parameters(param):
     vec_params = torch.cat(vec_params,dim=0)
     return vec_params
     
-# def filter_free_parameters(param):
-    # free_param = []
-    # for p in param:
-        # if(p.size()[0]>1):
-            # free_param.append(p[:-1,])
-        # else:
-            # free_param.append(p)
-    # return free_param
-
-# def get_free_parameters(model):
-    # if(not model.ifclassification):
-        # return model.parameters()
-    # param = list(model.parameters())
-    # outputlayer_param = list(model.outputlayer.parameters())
-    # free_param = param[:-len(outputlayer_param)]
-    # outputlayer_free_param = filter_free_parameters(outputlayer_param)
-    # free_param.extend(outputlayer_free_param)
-    # return free_param
-    
-
-    
-# def get_free_grad_parameters(grad_parameters,model):
-    # grad_parameters = list(grad_parameters)
-    # if(not model.ifclassification):
-        # return grad_parameters   
-    # num_outputlayer_param = len(list(model.outputlayer.parameters()))
-    # outputlayer_grad_param = grad_parameters[-num_outputlayer_param:]
-    # free_grad_param = grad_parameters[:-num_outputlayer_param]
-    # outputlayer_free_grad_param = filter_free_parameters(outputlayer_grad_param)
-    # free_grad_param.extend(outputlayer_free_grad_param)
-    # return free_grad_param
-
-# def get_free_vec_parameters_idx(model):
-    # param = list(model.parameters())
-    # outputlayer_param = list(model.outputlayer.parameters())
-    # num_outputlayer_param = len(list(model.outputlayer.parameters()))
-    # free_param = param[:-num_outputlayer_param]
-    # count = 0
-    # idx = None
-    # if(len(free_param)!=0):
-        # for i in range(len(free_param)):
-            # count = count + torch.numel(free_param[i])
-        # idx = torch.arange(count).long()
-    # for p in outputlayer_param:
-        # if(p.size()[0]>1):
-            # cur_num_free_param = torch.numel(p[:-1,])
-        # else:
-            # cur_num_free_param = torch.numel(p)
-        # total_num_free_param = torch.numel(p)
-        # if(idx is None):
-            # idx = torch.arange(count,count+cur_num_free_param).long()
-        # else:
-            # idx = torch.cat((idx,torch.arange(count,count+cur_num_free_param).long()),dim=0)
-        # count = count+total_num_free_param
-    # if(next(model.parameters()).is_cuda):
-        # idx = idx.cuda()
-    # return idx
-                       
-# def count_free_parameters(model):
-    # free_param = get_free_parameters(model)
-    # vec_free_params = vectorize_parameters(free_param)
-    # num_free_params = vec_free_params.size()[0]
-    # return num_free_params
-
 def get_AIC(dataSize,mw):
     num_param = mw.num_free_parameters()
     AIC = (num_param)/dataSize
@@ -121,12 +54,13 @@ def get_GTIC(dataSize,mw,loss_batch):
     l_vec_free_grad_params=[]
     for j in range(np.int(dataSize)):
         grad_params = torch.autograd.grad(likelihood_batch[j], mw.parameters(), create_graph=True, only_inputs=True)
-        tmp_free_grad_params = mw.free_parameters(grad_params)
+        tmp_free_grad_params = mw.free_parameters(list(grad_params))
         vec_free_grad_params = vectorize_parameters(tmp_free_grad_params)
         vec_free_grad_params = vec_free_grad_params.unsqueeze(0)
-        l_vec_free_grad_params.append(vec_free_grad_params)       
+        l_vec_free_grad_params.append(vec_free_grad_params)         
     free_grad_params = torch.cat(l_vec_free_grad_params,dim=0)
     sum_free_grad_params = torch.sum(free_grad_params,dim=0)
+    #print(sum_free_grad_params)
     non_zero_idx = torch.nonzero(sum_free_grad_params[:,0])
     non_zero_idx = non_zero_idx.data
     free_grad_params_T = free_grad_params.transpose(1,2)
@@ -134,6 +68,7 @@ def get_GTIC(dataSize,mw,loss_batch):
     J = torch.sum(J_batch,dim=0)
     J = J[non_zero_idx,non_zero_idx.view(1,-1)]   
     J = J/dataSize
+    #print('J')
     #print(J)
     H = []
     for j in sum_free_grad_params:
@@ -144,6 +79,7 @@ def get_GTIC(dataSize,mw,loss_batch):
     free_vec_parameters_idx = mw.free_vec_parameters_idx()
     H = H[:,free_vec_parameters_idx]
     H = H[non_zero_idx,non_zero_idx.view(1,-1)]
+    #print('H')
     #print(H)
     V = -H/dataSize
     try:
@@ -166,102 +102,51 @@ def get_GTIC(dataSize,mw,loss_batch):
         # print(J)
         # print(H)
         GTIC = 65535
+    #exit()
     return GTIC
 
 def get_GTIC_approx(dataSize,mw,loss_batch):
     likelihood_batch = -loss_batch
-    l_vec_free_grad_params=[]
-    for j in range(np.int(dataSize)):
-        grad_params = torch.autograd.grad(likelihood_batch[j], mw.parameters(), create_graph=True, only_inputs=True)
+    free_vec_parameters_idx = mw.free_vec_parameters_idx()
+    params = mw.parameters()
+    free_params = mw.free_parameters(params)
+    l_approx=[]
+    for i in range(np.int(dataSize)):
+        grad_params = torch.autograd.grad(likelihood_batch[i], mw.parameters(), create_graph=True, only_inputs=True)
         tmp_free_grad_params = mw.free_parameters(grad_params)
         vec_free_grad_params = vectorize_parameters(tmp_free_grad_params)
-        vec_free_grad_params = vec_free_grad_params.unsqueeze(0)
-        l_vec_free_grad_params.append(vec_free_grad_params)       
-    free_grad_params = torch.cat(l_vec_free_grad_params,dim=0)
-    sum_free_grad_params = torch.sum(free_grad_params,dim=0)
-    non_zero_idx = torch.nonzero(sum_free_grad_params[:,0])
-    non_zero_idx = non_zero_idx.data
-    free_grad_params_T = free_grad_params.transpose(1,2)
-    J_batch = torch.matmul(free_grad_params,free_grad_params_T)
-    J = torch.sum(J_batch,dim=0)
-    J = J[non_zero_idx,non_zero_idx.view(1,-1)]   
-    J = J/dataSize
-    #print(J)
-    H = []
-    for j in sum_free_grad_params:
-        h = torch.autograd.grad(j, mw.parameters(), create_graph=True)
-        h = vectorize_parameters(h).view(1,-1)   
-        H.append(h)
-    H = torch.cat(H,dim=0)
-    free_vec_parameters_idx = mw.free_vec_parameters_idx()
-    H = H[:,free_vec_parameters_idx]
-    H = H[non_zero_idx,non_zero_idx.view(1,-1)]
-    #print(H)
-    V = -H/dataSize
-    try:
-        inv_V = torch.inverse(V)
-        #print(inv_V)
-        VmJ = torch.matmul(inv_V,J)
-        tVMJ = torch.trace(VmJ)
-        print('effective num of paramters')
-        print(tVMJ.data[0])
-        GTIC = tVMJ/dataSize
-        if(GTIC.data[0]<0 or np.isnan(tVMJ.data[0])):
-            print('numerically unstable')
-            # print(J)
-            # print(H)
-            # print(inv_V)
-            GTIC = 65535
-    except RuntimeError as e:
-        print('numerically unstable, not invertable')
-        # print(e)
-        # print(J)
-        # print(H)
-        GTIC = 65535
-    return GTIC
-    
-# def get_Lasso(model,regularization_param):
-    # l1_reg = None
-    # for W in model.parameters():
-        # if l1_reg is None:
-            # l1_reg = W.norm(1)
-        # else:
-            # l1_reg = l1_reg + W.norm(1)
-    # Lasso = regularization_param * l1_reg
-    # return Lasso
-    
-# def get_Ridge(model,regularization_param):
-    # l2_reg = None
-    # for W in model.parameters():
-        # if l2_reg is None:
-            # l2_reg = W.norm(2)
-        # else:
-            # l2_reg = l2_reg + W.norm(2)
-    # Ridge = regularization_param * l2_reg
-    # return Ridge
+        second_grad_params = []
+        for j in vec_free_grad_params:
+            h = torch.autograd.grad(j, mw.parameters(), create_graph=True)
+            h = vectorize_parameters(h).view(1,-1)   
+            second_grad_params.append(h)
+        second_grad_params = torch.cat(second_grad_params,dim=0)    
+        tmp_free_second_grad_params = second_grad_params[:,free_vec_parameters_idx]        
+        cholesky_free_second_grad_params = torch.potrf(tmp_free_second_grad_params)
+        approx = cholesky_free_second_grad_params.matmul(free_params)
+        approx = approx.unsqueeze(0)
+        l_approx.append(approx)        
+    approx = torch.cat(l_approx,dim=0)
+    tVMJ =  torch.var(approx,dim=0)
+    GTIC = tVMJ/dataSize
+    return GTIC    
 
-# def get_ElasticNet(model,regularization_param):
-    # en_reg = None
-    # for W in model.parameters():
-        # if en_reg is None:
-            # en_reg = regularization_param[0]* W.norm(1) + regularization_param[1] * W.norm(2)
-        # else:
-            # en_reg = en_reg + regularization_param[0] * W.norm(1) + regularization_param[1] * W.norm(2)
-    # ElasticNet = en_reg
-    # return ElasticNet
-
-def get_REG(dataSize,mw,loss_batch,regularization_param,if_jointREG=False):
-    g_reg = None
-    if if_jointREG:
-        g_reg = get_GTIC(dataSize,mw,loss_batch)
-    for W in mw.parameters():
-        for i in range(regularization_param.size()[0]):
-            if g_reg is None:
-                g_reg = regularization_param[i]* W.norm(np.float(i))
-            else:
-                g_reg = g_reg + regularization_param[i]* W.norm(np.float(i)) 
-    GREG = g_reg
-    return GREG
+def get_REG(dataSize,mw,loss_batch,regularization,regularization_param):
+    reg = None
+    if(regularization_param is not None):    
+        for W in mw.model.parameters():
+            for i in range(1,regularization_param.size()[0]+1):
+                if reg is None:
+                    reg = regularization_param[i-1] * W.norm(np.float(i))
+                else:
+                    reg = reg + regularization_param[i-1] * W.norm(np.float(i))
+    if (regularization[0]!=0):
+        reg = reg + get_GTIC(dataSize,mw,loss_batch)
+    print(reg)
+    print(regularization_param)
+    exit()
+    REG = reg
+    return REG
 
 def regularization(dataSizes,mws,loss_batches,mode):
     REG = np.zeros(len(mws))
@@ -269,6 +154,7 @@ def regularization(dataSizes,mws,loss_batches,mode):
         REG = get_BC(dataSizes,mws,loss_batches)  
         return REG
     for i in range(len(mws)):
+        print(i)
         if(mode=='Base'):
             REG[i] = torch.mean(loss_batches[i])
         elif(mode=='AIC'):
@@ -278,7 +164,7 @@ def regularization(dataSizes,mws,loss_batches,mode):
         elif(mode=='GTIC'):
             REG[i] = torch.mean(loss_batches[i]) + get_GTIC(dataSizes[i],mws[i],loss_batches[i])
         elif(mode=='REG'):
-            REG[i] = torch.mean(loss_batches[i]) + get_REG(dataSizes[i],mws[i],loss_batches[i],mws[i].regularization_parameters())
+            REG[i] = torch.mean(loss_batches[i]) + get_REG(dataSizes[i],mws[i],loss_batches[i],mws[i].regularization,mws[i].regularization_parameters)
         else:
             print('mode not supported for model selection')
             exit()

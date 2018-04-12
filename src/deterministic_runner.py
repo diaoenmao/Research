@@ -76,7 +76,8 @@ class deterministic_runner(runner):
                 self.finalized_modelwrappers.append(finalized_model)
                 _,_,modelselect_loss_batch = self.tester(train_tensorset,self.finalized_modelwrappers[i],self.max_num_epochs-1,cur_TAG) 
                 self.modelselect_loss.append(modelselect_loss_batch)
-            self.modelselect_loss = regularization(self.dataSizes,self.finalized_modelwrappers,self.modelselect_loss,mode)
+            self.modelselect_loss = regularization(self.dataSizes,self.finalized_modelwrappers,self.modelselect_loss,self.mode)
+            print(self.modelselect_loss)
             self.selected_model_id = np.argmin(self.modelselect_loss)
         else:
             print('mode not supported')
@@ -131,9 +132,17 @@ class deterministic_runner(runner):
                 train_loss_iter.append(float(loss)) 
                 train_regularized_loss_iter.append(float(regularized_loss))  
                 train_acc_iter.append(float(acc))  
-                # ===================backward====================        
-                regularized_loss.backward()
-                return regularized_loss                     
+                # ===================backward====================
+                if(self.ifregularize):
+                    print('a')
+                    print(modelwrapper.parameters())
+                    print(loss)
+                    print(regularized_loss)
+                    regularized_loss.backward()
+                    return regularized_loss
+                else:
+                    loss.backward()
+                    return loss
             optimizer.step(closure)       
             e = time.time()
             # ===================log========================
@@ -145,7 +154,7 @@ class deterministic_runner(runner):
                 print('epoch [{}/{}], loss:{}, regularized loss:{}, acc:{:.4f}'
                     .format(epoch+1, self.max_num_epochs, train_loss_epoch[j], train_regularized_loss_epoch[j], train_acc_epoch[j]))            
             if(self.ifsave):
-                save_model(modelwrapper, './model/model_{}_{}.pth'.format(epoch,TAG))
+                save_model(model, './model/model_{}_{}.pth'.format(epoch,TAG))
                 save([train_loss_iter,train_loss_epoch,train_regularized_loss_iter,train_regularized_loss_epoch,train_acc_iter,train_acc_epoch],'./output/train/loss_acc_{}.pkl'.format(TAG))
             j = j + 1
         return modelwrapper
@@ -166,7 +175,7 @@ class deterministic_runner(runner):
         e = time.time()
         # ===================log========================
         print("Elapsed Time for one epoch: %.3f" % (e-s))
-        print('loss:{}, regularized_loss:{}, acc:{:.4f}'.format(test_loss, test_regularized_loss, test_acc))
+        print('loss:{}, regularized_loss:{}, acc:{:.4f}'.format(float(test_loss), float(test_regularized_loss), float(test_acc)))
         if(self.ifsave):
             save([test_loss, test_regularized_loss, test_acc],'./output/test/loss_{}.pkl'.format(TAG))
         return test_loss,test_acc,test_loss_batch

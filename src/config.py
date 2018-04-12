@@ -4,7 +4,8 @@ def init():
     global PARAM
     PARAM = {
         'optimizer_param': {'lr': 0.8},
-        'regularization_param': [0.001,0.001],
+        'regularization_parameters': [1,0.001,0.001],
+        'if_joint_regularization': True,
         'optimizer_name': 'LBFGS',
         'batch_size': 20,
         'ifcuda': True,

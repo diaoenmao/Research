@@ -9,13 +9,13 @@ from model import *
 from modelselect import *
 from stochastic_runner import *
 from deterministic_runner import *
-
+from modelWrapper import *
 
 def main():   
    
     #mode = ['Base','AIC','BIC','BC','CrossValidation_1','CrossValidation_3','CrossValidation_10','CrossValidation_loo','GTIC','Lasso','Ridge','ElasticNet','GREG']
     config.init()
-    mode = ['GTIC']
+    mode = ['REG']
     num_Experiments = 1
     dataSize = [1000]
 
@@ -94,7 +94,7 @@ def prepare_Linear(X,y,K,randomGen=None):
     models = gen_models_Linear(input_features,out_features,config.PARAM['input_datatype'],True,config.PARAM['ifcuda'])
     data = gen_data_Linear(X,y,K,config.PARAM['test_size'],input_features,randomGen)
     criterion = nn.CrossEntropyLoss(reduce=False)     
-    modelwrappers = gen_modelwrappers(models,config.PARAM['optimizer_param'],config.PARAM['optimizer_name'],criterion)   
+    modelwrappers = gen_modelwrappers(models,config.PARAM['optimizer_param'],config.PARAM['optimizer_name'],criterion,config.PARAM['regularization_parameters'],config.PARAM['if_joint_regularization'])     
     return data,modelwrappers
 
 def prepare_MLP(X,y,K,randomGen=None):
@@ -111,7 +111,7 @@ def prepare_MLP(X,y,K,randomGen=None):
     models = gen_models_MLP(input_features,hidden_layers,out_features,config.PARAM['input_datatype'],True,config.PARAM['ifcuda'])
     data = gen_data_Full(X,y,K,config.PARAM['test_size'],num_candidate_models,randomGen)
     criterion = nn.CrossEntropyLoss(reduce=False)     
-    modelwrappers = gen_modelwrappers(models,config.PARAM['optimizer_param'],config.PARAM['optimizer_name'],criterion)   
+    modelwrappers = gen_modelwrappers(models,config.PARAM['optimizer_param'],config.PARAM['optimizer_name'],criterion,config.PARAM['regularization_parameters'],config.PARAM['if_joint_regularization'])   
     return data,modelwrappers
     
 def Experiment(id,X,y,mode,randomGen=None): 
@@ -128,7 +128,7 @@ def Experiment(id,X,y,mode,randomGen=None):
     r.set_datatype(config.PARAM['input_datatype'],config.PARAM['target_datatype'])
     #r.set_early_stopping(max_num_epochs, min_delta, patience)
     r.set_max_num_epochs(config.PARAM['max_num_epochs'])
-    r.set_regularization_param(config.PARAM['ifregularize'], regularization_param=config.PARAM['regularization_param'])
+    r.set_ifregularize(config.PARAM['ifregularize'])
     r.train(config.PARAM['ifshow'])
     output = r.test()
     

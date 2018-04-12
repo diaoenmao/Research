@@ -17,10 +17,10 @@ def to_numpy(x,ifcuda):
     x = x.data.cpu().numpy() if ifcuda else x.data.numpy()
     return x
     
-def to_var(x,ifcuda):
+def to_var(x,ifcuda,requires_grad=False):
     if torch.cuda.is_available() and ifcuda:
         x = x.cuda()
-    return Variable(x)
+    return Variable(x,requires_grad=requires_grad)
         
 def save(input,dir,protocol = 3):
     dirname = os.path.dirname(dir)
