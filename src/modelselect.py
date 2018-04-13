@@ -137,14 +137,12 @@ def get_REG(dataSize,mw,loss_batch,regularization,regularization_param):
         for W in mw.model.parameters():
             for i in range(1,regularization_param.size()[0]+1):
                 if reg is None:
-                    reg = regularization_param[i-1] * W.norm(np.float(i))
+                    reg = torch.exp(regularization_param[i-1]) * W.norm(np.float(i))
                 else:
-                    reg = reg + regularization_param[i-1] * W.norm(np.float(i))
+                    reg = reg + torch.exp(regularization_param[i-1]) * W.norm(np.float(i))
     if (regularization[0]!=0):
-        reg = reg + get_GTIC(dataSize,mw,loss_batch)
-    print(reg)
-    print(regularization_param)
-    exit()
+        GTIC = get_GTIC(dataSize,mw,loss_batch+reg)
+        reg = reg + GTIC
     REG = reg
     return REG
 
