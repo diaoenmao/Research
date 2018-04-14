@@ -91,13 +91,13 @@ class modelWrapper:
             idx = idx.cuda()
         return idx
     
-    def loss_acc(self,input,target):
+    def loss_acc(self,input,target,ifregularize):
         dataSize = input.size()[0]
         output = self.model(input)
         loss_batch = self.criterion(output, target)
         loss = torch.mean(loss_batch)
         acc = get_acc(output,target)
-        if(self.regularization is not None):
+        if(self.regularization is not None and ifregularize):
             regularized_loss = loss + get_REG(dataSize,self,loss_batch,self.regularization,self.regularization_parameters)     
         else:
             regularized_loss = loss

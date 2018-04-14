@@ -109,20 +109,27 @@ def get_GTIC_approx(dataSize,mw,loss_batch):
     likelihood_batch = -loss_batch
     free_vec_parameters_idx = mw.free_vec_parameters_idx()
     params = mw.parameters()
+    print(params)
     free_params = mw.free_parameters(params)
     l_approx=[]
     for i in range(np.int(dataSize)):
         grad_params = torch.autograd.grad(likelihood_batch[i], mw.parameters(), create_graph=True, only_inputs=True)
-        tmp_free_grad_params = mw.free_parameters(grad_params)
+        tmp_free_grad_params = mw.free_parameters(list(grad_params))
+        print(tmp_free_grad_params)
         vec_free_grad_params = vectorize_parameters(tmp_free_grad_params)
+        print(vec_free_grad_params)
         second_grad_params = []
         for j in vec_free_grad_params:
             h = torch.autograd.grad(j, mw.parameters(), create_graph=True)
             h = vectorize_parameters(h).view(1,-1)   
             second_grad_params.append(h)
         second_grad_params = torch.cat(second_grad_params,dim=0)    
-        tmp_free_second_grad_params = second_grad_params[:,free_vec_parameters_idx]        
+        print(second_grad_params)
+        tmp_free_second_grad_params = second_grad_params[:,free_vec_parameters_idx]
+        print(tmp_free_second_grad_params)        
         cholesky_free_second_grad_params = torch.potrf(tmp_free_second_grad_params)
+        print(cholesky_free_second_grad_params)
+        exit() 
         approx = cholesky_free_second_grad_params.matmul(free_params)
         approx = approx.unsqueeze(0)
         l_approx.append(approx)        
@@ -141,7 +148,10 @@ def get_REG(dataSize,mw,loss_batch,regularization,regularization_param):
                 else:
                     reg = reg + torch.exp(regularization_param[i-1]) * W.norm(np.float(i))
     if (regularization[0]!=0):
-        GTIC = get_GTIC(dataSize,mw,loss_batch+reg)
+        if(reg is not None):
+            GTIC = get_GTIC_approx(dataSize,mw,loss_batch+reg)
+        else:
+            GTIC = get_GTIC_approx(dataSize,mw,loss_batch)
         reg = reg + GTIC
     REG = reg
     return REG

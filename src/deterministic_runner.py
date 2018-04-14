@@ -128,7 +128,7 @@ class deterministic_runner(runner):
             def closure():
                 optimizer.zero_grad()
                 # ===================forward=====================
-                loss,regularized_loss,loss_batch,acc = modelwrapper.loss_acc(input,target)
+                loss,regularized_loss,loss_batch,acc = modelwrapper.loss_acc(input,target,self.ifregularize)
                 train_loss_iter.append(float(loss)) 
                 train_regularized_loss_iter.append(float(regularized_loss))  
                 train_acc_iter.append(float(acc))  
@@ -171,7 +171,7 @@ class deterministic_runner(runner):
         model = model.eval()
         s = time.time()
         # ===================forward=====================
-        test_loss,test_regularized_loss,test_loss_batch,test_acc = modelwrapper.loss_acc(input,target)
+        test_loss,test_regularized_loss,test_loss_batch,test_acc = modelwrapper.loss_acc(input,target,self.ifregularize)
         e = time.time()
         # ===================log========================
         print("Elapsed Time for one epoch: %.3f" % (e-s))
