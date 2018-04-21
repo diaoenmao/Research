@@ -24,12 +24,12 @@ def vectorize_parameters(param):
     return vec_params
     
 def get_AIC(dataSize,mw):
-    num_param = mw.num_free_parameters()
+    num_param = mw.num_free_parameters(mw.parameters())
     AIC = (num_param)/dataSize
     return AIC
 
 def get_BIC(dataSize,mw):
-    num_param = mw.num_free_parameters()
+    num_param = mw.num_free_parameters(mw.parameters())
     BIC = (num_param*np.log(dataSize))/(2*dataSize)
     return BIC
 
@@ -37,9 +37,9 @@ def get_BC(dataSize,mws,loss,coef=2/3):
     BC = np.zeros(len(mws))
     AIC = regularization(dataSize,mws,loss,'AIC')
     AIC_selected = np.argmin(AIC)
-    AIC_selected_num_parameters = mws[AIC_selected].num_free_parameters()
+    AIC_selected_num_parameters = mws[AIC_selected].num_free_parameters(mws[AIC_selected].parameters())
     for i in range(len(mws)):
-        num_param = mws[i].num_free_parameters()
+        num_param = mws[i].num_free_parameters(mw[i].parameters())
         if(num_param<=AIC_selected_num_parameters):
             adjustment = 0
             for j in range(1,num_param+1):
@@ -60,13 +60,15 @@ def get_GTIC(dataSize,mw,loss_batch):
         l_vec_free_grad_params.append(vec_free_grad_params)         
     free_grad_params = torch.cat(l_vec_free_grad_params,dim=0)
     sum_free_grad_params = torch.sum(free_grad_params,dim=0)
-    #print(sum_free_grad_params)
-    non_zero_idx = torch.nonzero(sum_free_grad_params[:,0])
-    non_zero_idx = non_zero_idx.data
+    non_zero_idx_1 = torch.nonzero(sum_free_grad_params[:,0])
+    non_zero_idx_1 = non_zero_idx_1.data
+    if(non_zero_idx_1.size()==torch.Size([])):
+        print('empty J')
+        return 0
     free_grad_params_T = free_grad_params.transpose(1,2)
     J_batch = torch.matmul(free_grad_params,free_grad_params_T)
     J = torch.sum(J_batch,dim=0)
-    J = J[non_zero_idx,non_zero_idx.view(1,-1)]   
+    J = J[non_zero_idx_1,non_zero_idx_1.view(1,-1)]   
     J = J/dataSize
     #print('J')
     #print(J)
@@ -78,66 +80,53 @@ def get_GTIC(dataSize,mw,loss_batch):
     H = torch.cat(H,dim=0)
     free_vec_parameters_idx = mw.free_vec_parameters_idx()
     H = H[:,free_vec_parameters_idx]
-    H = H[non_zero_idx,non_zero_idx.view(1,-1)]
+    H = H[non_zero_idx_1,non_zero_idx_1.view(1,-1)]
+    sum_H = torch.sum(H,dim=0)
+    non_zero_idx_2 = torch.nonzero(sum_H)
+    non_zero_idx_2 = non_zero_idx_2.data
+    if(non_zero_idx_2.size()==torch.Size([])):
+        print('empty H')
+        return 0
+    J = J[non_zero_idx_2,non_zero_idx_2.view(1,-1)] 
+    H = H[non_zero_idx_2,non_zero_idx_2.view(1,-1)] 
     #print('H')
     #print(H)
     V = -H/dataSize
+    AIC = get_AIC(dataSize,mw)
     try:
         inv_V = torch.inverse(V)
-        #print(inv_V)
         VmJ = torch.matmul(inv_V,J)
         tVMJ = torch.trace(VmJ)
-        print('effective num of paramters')
-        print(tVMJ.data[0])
         GTIC = tVMJ/dataSize
-        if(GTIC.data[0]<0 or np.isnan(tVMJ.data[0])):
+        if(GTIC.data[0] < 0 or GTIC.data[0] > AIC or np.isnan(tVMJ.data[0])):
             print('numerically unstable')
-            # print(J)
-            # print(H)
-            # print(inv_V)
-            GTIC = 65535
+            print(sum_H)
+            print(non_zero_idx_2)
+            print(J)
+            print(H)
+            print(inv_V)
+            print('effective num of paramters')
+            print(AIC*dataSize)
+            GTIC = AIC
+        else:
+            print('effective num of paramters')
+            print(tVMJ.data[0])
     except RuntimeError as e:
+        print(e)
         print('numerically unstable, not invertable')
-        # print(e)
-        # print(J)
-        # print(H)
-        GTIC = 65535
-    #exit()
+        print(sum_H)
+        print(non_zero_idx_2)
+        print(J)
+        print(H)
+        # pinv_V = p_inverse(V)
+        # VmJ = torch.matmul(pinv_V,J)
+        # tVMJ = torch.trace(VmJ)
+        # print(pinv_V)
+        print('effective num of paramters')
+        print(AIC*dataSize)
+        GTIC = AIC
     return GTIC
-
-def get_GTIC_approx(dataSize,mw,loss_batch):
-    likelihood_batch = -loss_batch
-    free_vec_parameters_idx = mw.free_vec_parameters_idx()
-    params = mw.parameters()
-    print(params)
-    free_params = mw.free_parameters(params)
-    l_approx=[]
-    for i in range(np.int(dataSize)):
-        grad_params = torch.autograd.grad(likelihood_batch[i], mw.parameters(), create_graph=True, only_inputs=True)
-        tmp_free_grad_params = mw.free_parameters(list(grad_params))
-        print(tmp_free_grad_params)
-        vec_free_grad_params = vectorize_parameters(tmp_free_grad_params)
-        print(vec_free_grad_params)
-        second_grad_params = []
-        for j in vec_free_grad_params:
-            h = torch.autograd.grad(j, mw.parameters(), create_graph=True)
-            h = vectorize_parameters(h).view(1,-1)   
-            second_grad_params.append(h)
-        second_grad_params = torch.cat(second_grad_params,dim=0)    
-        print(second_grad_params)
-        tmp_free_second_grad_params = second_grad_params[:,free_vec_parameters_idx]
-        print(tmp_free_second_grad_params)        
-        cholesky_free_second_grad_params = torch.potrf(tmp_free_second_grad_params)
-        print(cholesky_free_second_grad_params)
-        exit() 
-        approx = cholesky_free_second_grad_params.matmul(free_params)
-        approx = approx.unsqueeze(0)
-        l_approx.append(approx)        
-    approx = torch.cat(l_approx,dim=0)
-    tVMJ =  torch.var(approx,dim=0)
-    GTIC = tVMJ/dataSize
-    return GTIC    
-
+    
 def get_REG(dataSize,mw,loss_batch,regularization,regularization_param):
     reg = None
     if(regularization_param is not None):    
@@ -149,10 +138,11 @@ def get_REG(dataSize,mw,loss_batch,regularization,regularization_param):
                     reg = reg + torch.exp(regularization_param[i-1]) * W.norm(np.float(i))
     if (regularization[0]!=0):
         if(reg is not None):
-            GTIC = get_GTIC_approx(dataSize,mw,loss_batch+reg)
+            GTIC = get_GTIC(dataSize,mw,loss_batch+reg)
+            reg = reg + GTIC
         else:
-            GTIC = get_GTIC_approx(dataSize,mw,loss_batch)
-        reg = reg + GTIC
+            GTIC = get_GTIC(dataSize,mw,loss_batch)
+            reg = GTIC
     REG = reg
     return REG
 

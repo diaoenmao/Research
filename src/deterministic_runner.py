@@ -46,7 +46,7 @@ class deterministic_runner(runner):
                     validated_mw = self.trainer(train_tensorset,copied_mw,self.mode,cur_TAG)
                     self.validated_model_loss[i,k],_,_ = self.tester(val_tensorset,validated_mw,self.max_num_epochs-1,cur_TAG)
                     if(ifshow):
-                        showLoss(self.max_num_epochs,['train','val'],cur_TAG)
+                        showLoss(['train','val'],cur_TAG)
 
             self.modelselect_loss = np.mean(self.validated_model_loss,axis=1)
             self.selected_model_id = np.argmin(self.modelselect_loss)
@@ -76,6 +76,8 @@ class deterministic_runner(runner):
                 self.finalized_modelwrappers.append(finalized_model)
                 _,_,modelselect_loss_batch = self.tester(train_tensorset,self.finalized_modelwrappers[i],self.max_num_epochs-1,cur_TAG) 
                 self.modelselect_loss.append(modelselect_loss_batch)
+                if(ifshow):
+                    showLoss(['train'],cur_TAG)
             self.modelselect_loss = regularization(self.dataSizes,self.finalized_modelwrappers,self.modelselect_loss,self.mode)
             print(self.modelselect_loss)
             self.selected_model_id = np.argmin(self.modelselect_loss)

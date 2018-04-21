@@ -42,9 +42,9 @@ def run_Experiment(dataSize,mode,num_Experiments):
             for i in range(len(seeds)):
                 s = time.time()
                 randomGen = np.random.RandomState(seeds[i])
-                X, y = fetch_data_logistic(dataSize[d],randomGen = randomGen)
+                #X, y = fetch_data_logistic(dataSize[d],randomGen = randomGen)
                 #X, y = fetch_data_mld(dataSize[d],randomGen = randomGen) 
-                #X, y = fetch_data_circle(dataSize[d],randomGen = randomGen) 
+                X, y = fetch_data_circle(dataSize[d],randomGen = randomGen) 
                 selected_model_id[i],best_model_id[i],selected_model_test_loss[i],best_model_test_loss[i],selected_model_test_acc[i],best_model_test_acc[i],efficiency[i] = Experiment(i,X,y,mode[m],randomGen)
                 e = time.time()   
                 timing[i] = e-s
@@ -99,7 +99,7 @@ def prepare_Linear(X,y,K,randomGen=None):
 
 def prepare_MLP(X,y,K,randomGen=None):
     max_num_nodes = [20]
-    init_size=None
+    init_size=[10]
     step_size=None
     hidden_layers = gen_hidden_layers(max_num_nodes,init_size=init_size,step_size=step_size)
     #hidden_layers = [(10,1,5),(10,20)]
@@ -119,8 +119,8 @@ def Experiment(id,X,y,mode,randomGen=None):
     dataSize = X.shape[0]
     mode,K = parse_mode(mode,dataSize)
     
-    data,modelwrappers = prepare_Linear(X,y,K,randomGen)
-    #data,modelwrappers = prepare_MLP(X,y,K,randomGen)
+    #data,modelwrappers = prepare_Linear(X,y,K,randomGen)
+    data,modelwrappers = prepare_MLP(X,y,K,randomGen)
     
     print('Start Experiment {} of {}_{}_{}'.format(id,dataSize,mode,K))      
     r = deterministic_runner(id, data, modelwrappers, config.PARAM['ifcuda'], config.PARAM['verbose'], config.PARAM['ifsave'])

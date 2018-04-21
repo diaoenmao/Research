@@ -130,21 +130,6 @@ def gen_hidden_layers(max_num_nodes,init_size=None,step_size=None):
         del num_nodes[-1]   
     return hidden_layers
 
-# ===================Memory===================== 
-def memReport():
-    for obj in gc.get_objects():
-        if torch.is_tensor(obj):
-            print(type(obj), obj.size())
-    
-def cpuStats():
-        print(sys.version)
-        print(psutil.cpu_percent())
-        print(psutil.virtual_memory())  # physical memory usage
-        pid = os.getpid()
-        py = psutil.Process(pid)
-        memoryUse = py.memory_info()[0] / 2. ** 30  # memory use in GB...I think
-        print('memory GB:', memoryUse)
-
 def gpuStats(device=0):
     gpu_stats = gpustat.GPUStatCollection.new_query()
     item = gpu_stats.jsonify()["gpus"][device]
@@ -156,15 +141,19 @@ def p_inverse(A):
     return pinv 
     
 # ===================Figure=====================   
-def showLoss(num_loss,setnames,TAG=''):
+def showLoss(setnames,TAG=''):
     plt.figure()
     for i in range(len(setnames)):
-        loss_path = './output/{}/loss_{}.pkl'.format(setnames[i],TAG)
-        loss_iter,loss_epoch = load(loss_path)
+        loss_path = './output/{}/loss_acc_{}.pkl'.format(setnames[i],TAG)
+        loss_iter,loss_epoch,regularized_loss_iter,regularized_loss_epoch,acc_iter,acc_epoch = load(loss_path)
+        num_loss_iter = len(loss_iter)
+        num_loss_epoch = len(loss_epoch)
         if(setnames[i]=='train'):
-            plt.plot(np.arange(0,num_loss),loss_epoch[:num_loss,],label=setnames[i],linewidth=1)
+            plt.plot(np.arange(0,num_loss_iter),loss_iter,label='loss_'+setnames[i],linewidth=1)
+            plt.plot(np.arange(0,num_loss_iter),regularized_loss_iter,label='regularized_loss_'+setnames[i],linewidth=1)
         elif(setnames[i]=='val'):
-            plt.plot(np.arange(0,num_loss),loss_epoch[:num_loss,],label=setnames[i],linewidth=2)
+            plt.plot(np.arange(0,num_loss_iter),loss_iter,label='loss_'+setnames[i],linewidth=2)
+            plt.plot(np.arange(0,num_loss_iter),regularized_loss_iter,label='regularized_loss_'+setnames[i],linewidth=2)
     plt.grid()
     plt.legend()
     plt.xlabel('Epoch')

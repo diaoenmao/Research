@@ -23,7 +23,6 @@ def gen_models_Linear(input_features,out_features,input_datatype,ifclassificatio
         models.append(model)
     return models
 
-
 class MLP(nn.Module):
     def __init__(self, in_features, hidden_layers, out_features, ifclassification):
         super(MLP, self).__init__()

@@ -3,15 +3,15 @@ import torch
 def init():
     global PARAM
     PARAM = {
-        'optimizer_param': {'lr': 0.8},
+        'optimizer_param': {'lr': 0.5},
         'regularization_parameters': [1],
         'if_joint_regularization': False,
         'optimizer_name': 'LBFGS',
         'batch_size': 20,
-        'ifcuda': False,
+        'ifcuda': True,
         'verbose': True,
         'ifsave': True,
-        'ifshow': False,
+        'ifshow': True,
         'ifregularize': False,
         'input_datatype': torch.FloatTensor,
         'target_datatype': torch.LongTensor,
