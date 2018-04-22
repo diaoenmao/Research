@@ -3,7 +3,6 @@ import numpy as np
 from util import *
 from data import *
 from model import *
-from ccd_model import *
 
 # X, y = fetch_data_mld()
 # valid_target = np.array([5])

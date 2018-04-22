@@ -64,7 +64,7 @@ class modelWrapper:
         vec_free_params = vectorize_parameters(free_param)
         num_free_params = vec_free_params.size()[0]
         return num_free_params
-
+    
     def free_vec_parameters_idx(self):
         param = self.parameters()
         outputlayer_param = list(self.model.outputlayer.parameters())
@@ -108,20 +108,40 @@ class modelWrapper:
         copied_mw.set_optimizer_param(self.optimizer_param)
         copied_mw.set_criterion(self.criterion)
         copied_mw.set_regularization(self.regularization,self.if_joint_regularization)
-        copied_mw.wrap()
+        copied_mw.wrap(self.coordinate_set)
         return copied_mw
         
-    def wrap(self):
-        if(self.optimizer_name=='SGD'):
-            self.optimizer = torch.optim.SGD(self.parameters(),self.optimizer_param['lr'],self.optimizer_param['momentum'],self.optimizer_param['dampening'],
-            self.optimizer_param['weight_decay'],self.optimizer_param['nesterov']) 
-        elif(self.optimizer_name=='Adam'):
-            self.optimizer = torch.optim.Adam(self.parameters(),self.optimizer_param['lr'],self.optimizer_param['betas'],self.optimizer_param['eps'],
-            self.optimizer_param['weight_decay'],self.optimizer_param['amsgrad']) 
-        elif(self.optimizer_name=='LBFGS'):
-            self.optimizer = torch.optim.LBFGS(self.parameters(),self.optimizer_param['lr'],self.optimizer_param['max_iter'],self.optimizer_param['max_eval'],
-            self.optimizer_param['tolerance_grad'],self.optimizer_param['tolerance_change'],self.optimizer_param['history_size'],self.optimizer_param['line_search_fn'])
-			
+    def wrap(self,coordinate_set=None):
+        self.coordinate_set = coordinate_set
+        if(coordinate_set is None):
+            if(self.optimizer_name=='SGD'):
+                self.optimizer = torch.optim.SGD(self.parameters(),self.optimizer_param['lr'],self.optimizer_param['momentum'],self.optimizer_param['dampening'],
+                self.optimizer_param['weight_decay'],self.optimizer_param['nesterov']) 
+            elif(self.optimizer_name=='Adam'):
+                self.optimizer = torch.optim.Adam(self.parameters(),self.optimizer_param['lr'],self.optimizer_param['betas'],self.optimizer_param['eps'],
+                self.optimizer_param['weight_decay'],self.optimizer_param['amsgrad']) 
+            elif(self.optimizer_name=='LBFGS'):
+                self.optimizer = torch.optim.LBFGS(self.parameters(),self.optimizer_param['lr'],self.optimizer_param['max_iter'],self.optimizer_param['max_eval'],
+                self.optimizer_param['tolerance_grad'],self.optimizer_param['tolerance_change'],self.optimizer_param['history_size'],self.optimizer_param['line_search_fn'])
+        else:
+            if(self.regularization_parameters is not None):
+                num_regularization_parameters = self.regularization_parameters.size(0)
+                reg_coordinate_set = np.arange(num_regularization_parameters)
+            else:
+                reg_coordinate_set = []
+            self.optimizer=[]
+            param = list(self.parameters())
+            for i in range(len(coordinate_set)):
+                cur_coordinate_set = np.hstack((reg_coordinate_set,coordinate_set[i])).astype(int).tolist()
+                cur_param = [param[j] for j in cur_coordinate_set]
+                if(self.optimizer_name=='SGD'):
+                    self.optimizer.append(torch.optim.SGD(cur_param,self.optimizer_param['lr'],self.optimizer_param['momentum'],self.optimizer_param['dampening'],
+                    self.optimizer_param['weight_decay'],self.optimizer_param['nesterov']))
+                elif(self.optimizer_name=='Adam'):
+                    self.optimizer.append(torch.optim.Adam(cur_param,self.optimizer_param['lr'],self.optimizer_param['betas'],self.optimizer_param['eps'],
+                    self.optimizer_param['weight_decay'],self.optimizer_param['amsgrad']))
+        return
+            
 def gen_modelwrappers(models,optimizer_param,optimizer_name,criterion,regularization_parameters=None,if_joint_regularization=False):
     modelwrappers = []
     for i in range(len(models)):
