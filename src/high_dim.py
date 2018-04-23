@@ -9,8 +9,8 @@ from modelselect import *
 from modelWrapper import *
 
 TAG = 'high_dim'
-dataSize = 5000
-input_features = 10
+dataSize = 1000
+input_features = 30
 output_features = 2
 config.init()
     
@@ -29,7 +29,7 @@ test_loader = get_data_loader(X_test,y_test,input_datatype,target_datatype,confi
 list_train_loader = list(train_loader)
 
 criterion = nn.CrossEntropyLoss(reduce=False)
-model = local_Linear(input_features,output_features).type(input_datatype).cuda() if ifcuda else local_Linear(input_datatypes).type(config.PARAM['input_datatype'])
+model = Linear(input_features,output_features).type(input_datatype).cuda() if ifcuda else Linear(input_datatypes).type(config.PARAM['input_datatype'])
 coordinate_set = model.coordinate_set(config.PARAM['local_size'])
 mw = modelWrapper(model,config.PARAM['optimizer_name'])
 mw.set_optimizer_param(config.PARAM['optimizer_param'])
@@ -71,11 +71,11 @@ while(e<=max_num_epochs):
         print(loss)
         print('acc')
         print(acc)
-        cur_coordinate_set = coordinate_set[i]
-        cur_param = [param[j] for j in cur_coordinate_set]
-        tmp = torch.autograd.grad(loss, cur_param, create_graph=True, only_inputs=True)
-        print(tmp)
-        exit()
+        # cur_coordinate_set = coordinate_set[i]
+        # cur_param = [param[j] for j in cur_coordinate_set]
+        # tmp = torch.autograd.grad(loss, cur_param, create_graph=True, only_inputs=True)
+        # print(tmp)
+        # exit()
         if(ifregularize):
             regularized_loss.backward()
         else:
