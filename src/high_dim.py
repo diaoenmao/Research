@@ -45,6 +45,7 @@ optimizers = mw.optimizer
 head_tracker = 0
 stochastic_tracker = [None]*len(optimizers)
 e = 0
+param = list(mw.parameters())
 while(e<=max_num_epochs):
     stochastic_tracker[1:] = stochastic_tracker[:-1]
     stochastic_tracker[0] = head_tracker    
@@ -70,6 +71,11 @@ while(e<=max_num_epochs):
         print(loss)
         print('acc')
         print(acc)
+        cur_coordinate_set = coordinate_set[i]
+        cur_param = [param[j] for j in cur_coordinate_set]
+        tmp = torch.autograd.grad(loss, cur_param, create_graph=True, only_inputs=True)
+        print(tmp)
+        exit()
         if(ifregularize):
             regularized_loss.backward()
         else:
@@ -90,7 +96,9 @@ while(e<=max_num_epochs):
         e = e + 1
     if(e==max_num_epochs):
         head_tracker =  None
-
+if(config.PARAM['ifshow']):
+    show([train_loss_iter,train_regularized_loss_iter],['loss','regularized_loss'])
+    show([train_acc_iter],['acc'])
 
 final_train_loss = 0                    
 final_train_acc = 0

@@ -159,5 +159,17 @@ def showLoss(setnames,TAG=''):
     plt.xlabel('Epoch')
     plt.ylabel('Loss')
     plt.show()
-    return    
+    return
+    
+def show(loss,setnames):
+    plt.figure()
+    for i in range(len(setnames)):
+        num_loss = len(loss[i])
+        plt.plot(np.arange(0,num_loss),loss[i],label=setnames[i],linewidth=1)
+    plt.grid()
+    plt.legend()
+    plt.xlabel('Iteration')
+    plt.ylabel('Loss')
+    plt.show()    
+    return
     
