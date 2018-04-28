@@ -19,7 +19,7 @@ def early_stopping(loss,min_delta=1e-2, patience=10):
 def vectorize_parameters(param):
     vec_params = []
     for p in param:
-        vec_params.append(p.contiguous().view(-1,1))
+        vec_params.append(p.reshape((-1,1)))
     vec_params = torch.cat(vec_params,dim=0)
     return vec_params
     
@@ -193,4 +193,49 @@ def get_GTIC_closed(input, target, model):
     print(pen)
     return pen
     
-    
+def free_parameters(self, param):
+    if(not self.model.ifclassification):
+        return param
+    num_outputlayer_param = len(list(self.model.outputlayer.parameters()))
+    free_param = param[:-num_outputlayer_param]
+    outputlayer_param = param[-num_outputlayer_param:]
+    outputlayer_free_param = []
+    for p in outputlayer_param:
+        if(p.size()[0]>1):
+            outputlayer_free_param.append(p[:-1,])
+        else:
+            outputlayer_free_param.append(p)
+    free_param.extend(outputlayer_free_param)
+    return free_param
+
+def num_free_parameters(self, param):
+    free_param = self.free_parameters(param)
+    vec_free_params = vectorize_parameters(free_param)
+    num_free_params = vec_free_params.size()[0]
+    return num_free_params
+
+def free_vec_parameters_idx(self):
+    param = self.parameters()
+    outputlayer_param = list(self.model.outputlayer.parameters())
+    num_outputlayer_param = len(outputlayer_param)
+    free_param = param[:-num_outputlayer_param]
+    count = 0
+    idx = None
+    if(len(free_param)!=0):
+        for i in range(len(free_param)):
+            count = count + torch.numel(free_param[i])
+        idx = torch.arange(count).long()
+    for p in outputlayer_param:
+        if(p.size()[0]>1):
+            cur_num_free_param = torch.numel(p[:-1,])
+        else:
+            cur_num_free_param = torch.numel(p)
+        total_num_free_param = torch.numel(p)
+        if(idx is None):
+            idx = torch.arange(count,count+cur_num_free_param).long()
+        else:
+            idx = torch.cat((idx,torch.arange(count,count+cur_num_free_param).long()),dim=0)
+        count = count+total_num_free_param
+    if(self.ifcuda):
+        idx = idx.cuda()
+    return idx    

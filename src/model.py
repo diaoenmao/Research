@@ -31,13 +31,23 @@ class Linear(nn.Module):
             input_indices = np.arange(pivot,pivot+local_size)
             valid_input_indices = input_indices[(input_indices>=0)&(input_indices<=self.in_features)]
             valid_indices = [out_indices,valid_input_indices]
-            mesh_indices = np.meshgrid(*valid_indices, sparse=False, indexing='ij')
-            mesh_indices = tuple(mesh_indices)
+            mesh_indices = tuple(np.meshgrid(*valid_indices, sparse=False, indexing='ij'))
             raveled_indices = np.ravel_multi_index(mesh_indices, dims=(self.out_features,self.in_features+1), order='C') 
             raveled_indices = raveled_indices.ravel()
             coordinate_set.append(raveled_indices)
             pivot = pivot+local_size
         return coordinate_set
+    
+    def fixed_coordinate(self):
+        if(self.out_features==1):
+            return None
+        input_indices = np.arange(self.in_features+1)
+        out_index = self.out_features-1
+        fixed_indices = [out_index,input_indices]
+        mesh_indices = tuple(np.meshgrid(*fixed_indices, sparse=False, indexing='ij'))
+        raveled_indices = np.ravel_multi_index(mesh_indices, dims=(self.out_features,self.in_features+1), order='C') 
+        fixed_coordinate = raveled_indices.ravel()
+        return fixed_coordinate
         
     def forward(self, input):
         self.matrix = torch.cat(list(self.parameters()), dim=0).view(self.out_features,self.in_features+1)

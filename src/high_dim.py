@@ -10,32 +10,37 @@ from modelWrapper import *
 
 TAG = 'high_dim'
 dataSize = 1000
-input_features = 30
+input_features = 10
 output_features = 2
 config.init()
-    
+
+device = torch.device(config.PARAM['device'])    
 max_num_epochs = config.PARAM['max_num_epochs']
-ifcuda = config.PARAM['ifcuda']
 ifregularize = config.PARAM['ifregularize']
 input_datatype = config.PARAM['input_datatype']
 target_datatype = config.PARAM['target_datatype']
+if_GTIC = config.PARAM['if_GTIC']
 randomGen = np.random.RandomState(1)
+
 X, y = fetch_data_logistic(dataSize,randomGen = randomGen)
 X_train, X_test, y_train, y_test = split_data_p(X,y,test_size=config.PARAM['test_size'],randomGen = randomGen)
 X_train, X_test = X_train[:,:input_features], X_test[:,:input_features]
+
 get_data_stats(X_train,TAG=TAG)
-train_loader = get_data_loader(X_train,y_train,input_datatype,target_datatype,config.PARAM['batch_size'])
-test_loader = get_data_loader(X_test,y_test,input_datatype,target_datatype,config.PARAM['batch_size'])
+train_loader = get_data_loader(X_train,y_train,input_datatype,target_datatype,device,config.PARAM['batch_size'])
+test_loader = get_data_loader(X_test,y_test,input_datatype,target_datatype,device,config.PARAM['batch_size'])
 list_train_loader = list(train_loader)
 
 criterion = nn.CrossEntropyLoss(reduce=False)
-model = Linear(input_features,output_features).type(input_datatype).cuda() if ifcuda else Linear(input_datatypes).type(config.PARAM['input_datatype'])
+model = Linear(input_features,output_features).to(device)
 coordinate_set = model.coordinate_set(config.PARAM['local_size'])
-mw = modelWrapper(model,config.PARAM['optimizer_name'])
+fixed_coordinate = model.fixed_coordinate()
+mw = modelWrapper(model,config.PARAM['optimizer_name'],device)
 mw.set_optimizer_param(config.PARAM['optimizer_param'])
 mw.set_criterion(criterion)
-mw.set_regularization(config.PARAM['regularization_parameters'],config.PARAM['if_joint_regularization'])
-mw.wrap(coordinate_set)
+mw.set_regularization(config.PARAM['regularization'],config.PARAM['if_optimize_regularization'],config.PARAM['regularization_mode'])
+mw.set_coordinate(coordinate_set,fixed_coordinate)
+mw.wrap()
 
 train_loss_iter = []
 train_regularized_loss_iter = []
@@ -58,24 +63,20 @@ while(e<=max_num_epochs):
     cur_tracker = stochastic_tracker[i]
     while(cur_tracker is not None and i<len(optimizers)):
         print(cur_tracker)
+        coordinate = mw.coordinate_set[i]
+        mw.activate_coordinate(coordinate)
         optimizer = optimizers[i]
         input,target = list_train_loader[cur_tracker]
-        input = to_var(input,ifcuda)
-        target = to_var(target,ifcuda)        
+        input,_ = normalize(input,TAG=TAG)        
         optimizer.zero_grad()
-        loss,regularized_loss,_,acc = mw.loss_acc(input,target,ifregularize)
+        loss,regularized_loss,acc = mw.L(input,target,False,if_GTIC)
         train_loss_iter.append(float(loss))
         train_regularized_loss_iter.append(float(regularized_loss))
         train_acc_iter.append(float(acc))
         print('loss')
-        print(loss)
+        print(float(loss))
         print('acc')
-        print(acc)
-        # cur_coordinate_set = coordinate_set[i]
-        # cur_param = [param[j] for j in cur_coordinate_set]
-        # tmp = torch.autograd.grad(loss, cur_param, create_graph=True, only_inputs=True)
-        # print(tmp)
-        # exit()
+        print(float(acc))
         if(ifregularize):
             regularized_loss.backward()
         else:
@@ -96,6 +97,7 @@ while(e<=max_num_epochs):
         e = e + 1
     if(e==max_num_epochs):
         head_tracker =  None
+        
 if(config.PARAM['ifshow']):
     show([train_loss_iter,train_regularized_loss_iter],['loss','regularized_loss'])
     show([train_acc_iter],['acc'])
@@ -106,9 +108,7 @@ total_train_size = 0
 for input,target in train_loader:
     batch_size = input.size(0)
     total_train_size += batch_size
-    input = to_var(input,ifcuda)
-    target = to_var(target,ifcuda)   
-    loss,_,_,acc = mw.loss_acc(input,target,ifregularize)
+    loss,_,acc = mw.L(input,target,True)
     final_train_loss += loss*batch_size
     final_train_acc += acc*batch_size
 final_train_loss = float(final_train_loss/total_train_size)
@@ -120,13 +120,12 @@ final_test_acc = 0
 total_test_size = 0
 for input,target in test_loader:
     batch_size = input.size(0)
-    total_test_size += batch_size
-    input = to_var(input,ifcuda)
-    target = to_var(target,ifcuda)   
-    loss,_,_,acc = mw.loss_acc(input,target,ifregularize)
+    total_test_size += batch_size  
+    loss,_,acc = mw.L(input,target,True)
     final_test_loss += loss*batch_size
     final_test_acc += acc*batch_size
 final_test_loss = float(final_test_loss/total_test_size)
 final_test_acc = float(final_test_acc/total_test_size)
 print('test loss: {}, test acc: {} of size {}'.format(final_test_loss,final_test_acc,total_test_size))
 
+#save(mw, './model/model_{}.pth'.format(TAG))

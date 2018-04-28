@@ -151,41 +151,37 @@ def get_data_stats(input,target=None,TAG=''):
     save([m_input,std_input,m_target,std_target],'./data/stats/stats_{}.pkl'.format(TAG))
     return
 
-def get_data_tensorset(input,target,input_datatype,target_datatype):
-    input = torch.from_numpy(input).type(input_datatype)
-    target = torch.from_numpy(target).type(target_datatype) 
+def get_data_tensorset(input,target,input_datatype,target_datatype,device):
+    input = torch.from_numpy(input).type(input_datatype).to(device)
+    target = torch.from_numpy(target).type(target_datatype).to(device)
     dataset = data_utils.TensorDataset(input,target)
     return dataset
     
-def get_data_loader(input,target,input_datatype,target_datatype,batch_size):
-    dataset = get_data_tensorset(input,target,input_datatype,target_datatype)
+def get_data_loader(input,target,input_datatype,target_datatype,device,batch_size):
+    dataset = get_data_tensorset(input,target,input_datatype,target_datatype,device)
     data_loader = data_utils.DataLoader(dataset, batch_size=batch_size, shuffle=True)
     return data_loader
     
-def normalize(input,target=None,input_datatype=torch.FloatTensor,target_datatype=torch.FloatTensor,TAG=''):
+def normalize(input,target=None,TAG=''):
     m_input,std_input,m_target,std_target = load('./data/stats/stats_{}.pkl'.format(TAG))
     if input is not None:
-        norm_input = (input.numpy()-m_input)/std_input
-        norm_input = torch.FloatTensor(norm_input).type(input_datatype)
+        norm_input = (input-m_input)/std_input
     else:
         norm_input = None
     if target is not None:
         norm_target = (target.numpy()-m_target)/std_target
-        norm_target = torch.FloatTensor(norm_target).type(target_datatype)
     else:
         norm_target = None
     return norm_input,norm_target
 
-def denormalize(norm_input,norm_target=None,input_datatype=torch.FloatTensor,target_datatype=torch.FloatTensor,TAG=''):
+def denormalize(norm_input,norm_target=None,TAG=''):
     m_input,std_input,m_target,std_target = load('./data/stats/stats_{}.pkl'.format(TAG))
     if norm_input is not None:
-        denorm_inputs = norm_input.numpy()*std_input+m_input
-        input = torch.FloatTensor(denorm_inputs).type(input_datatype)
+        denorm_input = norm_input*std_input+m_input
     else:
-        input = None
+        denorm_input = None
     if norm_target is not None:
-        denorm_targets = norm_target.numpy()*std_target+m_target   
-        target = torch.FloatTensor(denorm_targets).type(target_datatype)
+        denorm_target = norm_target*std_target+m_target   
     else:
-        target = None
-    return input,target
+        denorm_target = None
+    return denorm_input,denorm_target

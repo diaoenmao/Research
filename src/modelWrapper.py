@@ -1,23 +1,29 @@
 import itertools
 import torch
 import copy
+import numpy as np
 from torch import nn
 from util import *
 from modelselect import *
 
 class modelWrapper:
     
-    def __init__(self,model,optimizer_name):
+    def __init__(self,model,optimizer_name,device):
         self.model = model
         self.optimizer_name = optimizer_name
+        self.device = device
         self.optimizer_param = {'lr':1e-3,'momentum':0,'dampening':0,'weight_decay':0,'nesterov':False,
         'betas':(0.9, 0.999),'eps':1e-8,'amsgrad':False,
         'max_iter':20,'max_eval':None,'tolerance_grad':1e-05,'tolerance_change':1e-09,'history_size':100,'line_search_fn':None}
         self.criterion = nn.NLLLoss(reduce=False)
-        self.regularization = None
-        self.regularization_parameters = None
-        self.if_joint_regularization = False
         self.ifcuda = next(self.model.parameters()).is_cuda
+        self.regularization = None
+        self.if_optimize_regularization=False
+        self.reg_coordinate_set = []
+        self.coordinate_set = None
+        self.fixed_coordinate = None
+        self.active_coordinate = None
+        self.inactive_coordinate = None
         
     def set_optimizer_name(self,optimizer_name):
         self.optimizer_name = optimizer_name
@@ -28,112 +34,178 @@ class modelWrapper:
     def set_criterion(self,criterion):
         self.criterion = criterion
         
-    def set_regularization(self,regularization_parameters,if_joint_regularization):
-        self.regularization = regularization_parameters
-        self.if_joint_regularization = if_joint_regularization
-        if(self.regularization is not None and len(self.regularization)>1): 
-            self.regularization_parameters = to_var(torch.FloatTensor(regularization_parameters[1:]),self.ifcuda,self.if_joint_regularization)
-            
+    def set_regularization(self,regularization,if_optimize_regularization,regularization_mode='all'):
+        self.regularization = regularization
+        self.regularization_mode = regularization_mode
+        self.if_optimize_regularization = if_optimize_regularization
+        self.regularization_mode = regularization_mode
+        if(self.regularization is not None): 
+            if(self.regularization_mode=='all'):
+                self.regularization_parameters = [torch.tensor([regularization[j]],dtype=torch.float,device=self.device,requires_grad=self.if_optimize_regularization) for j in range(len(regularization))]
+            elif(self.regularization_mode=='single'):
+                self.regularization_parameters = []
+                for i in range(len(list(self.model.parameters()))):
+                    self.regularization_parameters.extend([torch.tensor([regularization[j]],dtype=torch.float,device=self.device,requires_grad=self.if_optimize_regularization) for j in range(len(regularization))])
+        return
+        
     def parameters(self):
-        if(self.regularization is None or self.regularization_parameters is None or not self.if_joint_regularization):
+        if(self.regularization is None):
             return list(self.model.parameters())
         else:
-            parameters = [self.regularization_parameters, *self.model.parameters()]
+            parameters = [*self.regularization_parameters, *self.model.parameters()]
             return parameters
         
     def num_parameters(self):
         return sum(p.numel() for p in self.parameters() if p.requires_grad)
     
-    def free_parameters(self, param):
-        if(not self.model.ifclassification):
-            return param
-        num_outputlayer_param = len(list(self.model.outputlayer.parameters()))
-        free_param = param[:-num_outputlayer_param]
-        outputlayer_param = param[-num_outputlayer_param:]
-        outputlayer_free_param = []
-        for p in outputlayer_param:
-            if(p.size()[0]>1):
-                outputlayer_free_param.append(p[:-1,])
-            else:
-                outputlayer_free_param.append(p)
-        free_param.extend(outputlayer_free_param)
-        return free_param
-    
-    def num_free_parameters(self, param):
-        free_param = self.free_parameters(param)
-        vec_free_params = vectorize_parameters(free_param)
-        num_free_params = vec_free_params.size()[0]
-        return num_free_params
-    
-    def free_vec_parameters_idx(self):
+    def set_coordinate(self,coordinate_set,fixed_coordinate=None):
+        if(self.regularization is not None):
+                num_regularization_parameters = len(self.regularization_parameters)
+                if(self.if_optimize_regularization): 
+                    if(self.regularization_mode=='all'):
+                        self.reg_coordinate_set = np.arange(len(self.regularization))
+                    elif(self.regularization_mode=='single'):
+                        self.reg_coordinate_set = []
+                        for i in range(len(coordinate_set)):
+                            cur_reg_coordinate_set = []
+                            for j in range(len(coordinate_set[i])):  
+                                cur_reg_coordinate_set.extend(list(range(coordinate_set[i][j]*len(self.regularization),coordinate_set[i][j]*len(self.regularization)+len(self.regularization)))) 
+                            self.reg_coordinate_set.append(np.array(cur_reg_coordinate_set))
+                else:
+                    if(self.regularization_mode=='all'):
+                        self.reg_coordinate_set = []
+                    elif(self.regularization_mode=='single'):
+                        self.reg_coordinate_set = [[] for i in range(len(coordinate_set))]
+        else:
+            num_regularization_parameters = 0
+            self.reg_coordinate_set = []
+        self.coordinate_set = []
+        for i in range(len(coordinate_set)):
+            if(self.regularization_mode=='all'):
+                self.coordinate_set.append(np.hstack((self.reg_coordinate_set,np.array(coordinate_set[i])+num_regularization_parameters)).astype(int).tolist())
+            elif(self.regularization_mode=='single'):
+                self.coordinate_set.append(np.hstack((self.reg_coordinate_set[i],np.array(coordinate_set[i])+num_regularization_parameters)).astype(int).tolist())
+        if(fixed_coordinate is not None):
+            self.fixed_coordinate = fixed_coordinate+num_regularization_parameters
+            reg_fixed_coordinate = []
+            for i in range(len(fixed_coordinate)):
+                reg_fixed_coordinate.extend(list(range(fixed_coordinate[i]*len(self.regularization),fixed_coordinate[i]*len(self.regularization)+len(self.regularization))))
+            self.fixed_coordinate = np.hstack((self.fixed_coordinate,np.array(reg_fixed_coordinate)))
+        return  
+                  
+    def activate_coordinate(self,coordinate):
         param = self.parameters()
-        outputlayer_param = list(self.model.outputlayer.parameters())
-        num_outputlayer_param = len(outputlayer_param)
-        free_param = param[:-num_outputlayer_param]
-        count = 0
-        idx = None
-        if(len(free_param)!=0):
-            for i in range(len(free_param)):
-                count = count + torch.numel(free_param[i])
-            idx = torch.arange(count).long()
-        for p in outputlayer_param:
-            if(p.size()[0]>1):
-                cur_num_free_param = torch.numel(p[:-1,])
+        all_coordinate = list(range(len(param)))
+        self.active_coordinate = coordinate
+        self.inactive_coordinate = list(set(all_coordinate)-set(self.active_coordinate))
+        for i in self.active_coordinate:
+            param[i].requires_grad_(True) 
+        for i in self.inactive_coordinate:
+            param[i].requires_grad_(False)
+        return
+        
+    def GTIC(self,loss_batch,coordinate):
+        print(coordinate)
+        dataSize = loss_batch.size(0)
+        likelihood_batch = -loss_batch
+        param = self.parameters()
+        if(coordinate is None):
+            local_param = param
+        else:
+            local_param = [param[i] for i in coordinate]
+        list_vec_free_grad_params=[]
+        for j in range(dataSize):
+            grad_params = torch.autograd.grad(likelihood_batch[j], local_param, create_graph=True, only_inputs=True)
+            vec_grad_params = torch.cat(grad_params,dim=0)
+            vec_grad_params = vec_grad_params.unsqueeze(1).unsqueeze(0)
+            list_vec_free_grad_params.append(vec_grad_params)         
+        grad_params = torch.cat(list_vec_free_grad_params,dim=0)
+        sum_grad_params = torch.sum(grad_params,dim=0)
+        non_zero_idx_J = torch.nonzero(sum_grad_params[:,0])
+        if(non_zero_idx_J.size()==torch.Size([])):
+            print('empty J')
+            return 0
+        grad_params_T = grad_params.transpose(1,2)
+        J_batch = torch.matmul(grad_params,grad_params_T)
+        J = torch.sum(J_batch,dim=0)
+        J = J[non_zero_idx_J,non_zero_idx_J.view(1,-1)]   
+        J = J/dataSize
+        H = []
+        for j in sum_grad_params:
+            h = torch.autograd.grad(j, local_param, create_graph=True, only_inputs=True)
+            vec_h = torch.cat(h,dim=0)
+            vec_h = vec_h.unsqueeze(0)
+            H.append(vec_h)
+        H = torch.cat(H,dim=0)
+        H = H[non_zero_idx_J,non_zero_idx_J.view(1,-1)]
+        sum_H = torch.sum(H,dim=0)
+        non_zero_idx_H = torch.nonzero(sum_H)
+        if(non_zero_idx_H.size()==torch.Size([])):
+            print('empty H')
+            return 0
+        J = J[non_zero_idx_H,non_zero_idx_H.view(1,-1)] 
+        H = H[non_zero_idx_H,non_zero_idx_H.view(1,-1)]
+        # print('J')
+        # print(J)
+        # print('H')
+        # print(H)
+        V = -H/dataSize
+        try:
+            inv_V = torch.inverse(V)
+            VmJ = torch.matmul(inv_V,J)
+            tVMJ = torch.trace(VmJ)
+            GTIC = tVMJ/dataSize
+            if(GTIC < 0):
+                print('numerically unstable, negative')
+                print('effective num of paramters')
+                print(float(tVMJ))
+                GTIC = 0
             else:
-                cur_num_free_param = torch.numel(p)
-            total_num_free_param = torch.numel(p)
-            if(idx is None):
-                idx = torch.arange(count,count+cur_num_free_param).long()
-            else:
-                idx = torch.cat((idx,torch.arange(count,count+cur_num_free_param).long()),dim=0)
-            count = count+total_num_free_param
-        if(self.ifcuda):
-            idx = idx.cuda()
-        return idx
-    
-    def loss_acc(self,input,target,ifregularize):
-        dataSize = input.size()[0]
+                print('effective num of paramters')
+                print(float(tVMJ))
+        except RuntimeError as e:
+            print(e)
+            print('numerically unstable, not invertable')
+            GTIC = 0
+        return GTIC
+        
+    def L(self,input,target,if_eval,if_GTIC=False):        
+        model = self.model.eval() if if_eval else self.model
         output = self.model(input)
         loss_batch = self.criterion(output, target)
         loss = torch.mean(loss_batch)
         acc = get_acc(output,target)
-        if(self.regularization is not None and ifregularize):
-            regularized_loss = loss + get_REG(dataSize,self,loss_batch,self.regularization,self.regularization_parameters)     
-        else:
-            regularized_loss = loss
-        return loss,regularized_loss,loss_batch,acc
-        
-    def copy(self):
-        copied_mw = modelWrapper(copy.deepcopy(self.model),self.optimizer_name)
-        copied_mw.set_optimizer_param(self.optimizer_param)
-        copied_mw.set_criterion(self.criterion)
-        copied_mw.set_regularization(self.regularization,self.if_joint_regularization)
-        copied_mw.wrap(self.coordinate_set)
-        return copied_mw
-        
-    def wrap(self,coordinate_set=None):
-        self.coordinate_set = coordinate_set
-        if(coordinate_set is None):
+        REG = 0
+        GTIC = 0
+        if(self.regularization is not None):
+            i = 0
+            for p in self.model.parameters():
+                if(self.regularization_mode=='all'):
+                    for j in range(len(self.regularization)):
+                        REG = REG + torch.exp(self.regularization_parameters[j]) * p.norm(np.float(j+1))
+                elif(self.regularization_mode=='single'):
+                    for j in range(len(self.regularization)):
+                        REG = REG + torch.exp(self.regularization_parameters[i]) * p.norm(np.float(j+1))  
+                        i = i + 1
+        if(if_GTIC):
+            free_coordinate = list(set(self.active_coordinate)-set(self.fixed_coordinate))
+            GTIC = self.GTIC(loss_batch+REG,free_coordinate)
+        regularized_loss = loss + REG + GTIC
+        return loss,regularized_loss,acc
+                
+    def wrap(self):
+        if(self.coordinate_set is None or len(self.coordinate_set)==0):
             if(self.optimizer_name=='SGD'):
                 self.optimizer = torch.optim.SGD(self.parameters(),self.optimizer_param['lr'],self.optimizer_param['momentum'],self.optimizer_param['dampening'],
                 self.optimizer_param['weight_decay'],self.optimizer_param['nesterov']) 
             elif(self.optimizer_name=='Adam'):
                 self.optimizer = torch.optim.Adam(self.parameters(),self.optimizer_param['lr'],self.optimizer_param['betas'],self.optimizer_param['eps'],
                 self.optimizer_param['weight_decay'],self.optimizer_param['amsgrad']) 
-            elif(self.optimizer_name=='LBFGS'):
-                self.optimizer = torch.optim.LBFGS(self.parameters(),self.optimizer_param['lr'],self.optimizer_param['max_iter'],self.optimizer_param['max_eval'],
-                self.optimizer_param['tolerance_grad'],self.optimizer_param['tolerance_change'],self.optimizer_param['history_size'],self.optimizer_param['line_search_fn'])
-        else:
-            if(self.regularization_parameters is not None):
-                num_regularization_parameters = self.regularization_parameters.size(0)
-                reg_coordinate_set = np.arange(num_regularization_parameters)
-            else:
-                reg_coordinate_set = []
+        else:          
             self.optimizer=[]
             param = list(self.parameters())
-            for i in range(len(coordinate_set)):
-                cur_coordinate_set = np.hstack((reg_coordinate_set,coordinate_set[i])).astype(int).tolist()
-                cur_param = [param[j] for j in cur_coordinate_set]
+            for i in range(len(self.coordinate_set)):               
+                cur_param = [param[j] for j in self.coordinate_set[i]]
                 if(self.optimizer_name=='SGD'):
                     self.optimizer.append(torch.optim.SGD(cur_param,self.optimizer_param['lr'],self.optimizer_param['momentum'],self.optimizer_param['dampening'],
                     self.optimizer_param['weight_decay'],self.optimizer_param['nesterov']))
@@ -141,24 +213,5 @@ class modelWrapper:
                     self.optimizer.append(torch.optim.Adam(cur_param,self.optimizer_param['lr'],self.optimizer_param['betas'],self.optimizer_param['eps'],
                     self.optimizer_param['weight_decay'],self.optimizer_param['amsgrad']))
         return
-            
-def gen_modelwrappers(models,optimizer_param,optimizer_name,criterion,regularization_parameters=None,if_joint_regularization=False):
-    modelwrappers = []
-    for i in range(len(models)):
-        mw = modelWrapper(models[i],optimizer_name)
-        mw.set_optimizer_param(optimizer_param)
-        mw.set_criterion(criterion)
-        mw.set_regularization(regularization_parameters,if_joint_regularization)
-        mw.wrap()
-        modelwrappers.append(mw)
-    return modelwrappers
-                
-def unpack_modelwrappers(modelwrappers):
-    models = []
-    optimizer = []
-    for i in range(len(modelwrappers)):
-        models.append(modelwrappers[i].model)
-        optimizer.append(modelwrappers[i].optimizer)
-    return models,optimizer
     
     

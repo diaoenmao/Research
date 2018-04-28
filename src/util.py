@@ -12,15 +12,6 @@ import numpy as np
 import seaborn as sns
 from torch.autograd import Variable
 from matplotlib import pyplot as plt
-
-def to_numpy(x,ifcuda):
-    x = x.data.cpu().numpy() if ifcuda else x.data.numpy()
-    return x
-    
-def to_var(x,ifcuda,requires_grad=False):
-    if torch.cuda.is_available() and ifcuda:
-        x = x.cuda()
-    return Variable(x,requires_grad=requires_grad)
         
 def save(input,dir,protocol = 3):
     dirname = os.path.dirname(dir)
@@ -130,11 +121,6 @@ def gen_hidden_layers(max_num_nodes,init_size=None,step_size=None):
         del num_nodes[-1]   
     return hidden_layers
 
-def gpuStats(device=0):
-    gpu_stats = gpustat.GPUStatCollection.new_query()
-    item = gpu_stats.jsonify()["gpus"][device]
-    print("{}/{}".format(item["memory.used"], item["memory.total"]))
-    
 # ===================Function===================== 
 def p_inverse(A):
     pinv = (A.t().matmul(A)).inverse().matmul(A.t())
