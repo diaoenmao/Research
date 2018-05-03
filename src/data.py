@@ -14,7 +14,7 @@ mld_dataName = 'MNIST original'
 mld_data_dir = './data/'
 seed = 1234
 
-def fetch_data_mld(dataSize=70000,valid_target=np.arange(10),randomGen = np.random.RandomState(seed)):
+def fetch_data_mld(dataSize,valid_target=np.arange(10),randomGen = np.random.RandomState(seed)):
     print('fetching data...')
     data = datasets.fetch_mldata(mld_dataName, data_home=mld_data_dir)
     X = data.data
@@ -25,7 +25,7 @@ def fetch_data_mld(dataSize=70000,valid_target=np.arange(10),randomGen = np.rand
     print('data ready')
     return X, y
 
-def fetch_data_logistic(dataSize=1000,degree=100,coef=1.5,randomGen = np.random.RandomState(seed)):
+def fetch_data_logistic(dataSize,degree=100,coef=1.5,randomGen = np.random.RandomState(seed)):
     print('fetching data...') 
     X = randomGen.randn(dataSize,degree)
     beta = 10 / np.power(range(1,degree+1),coef)
@@ -34,6 +34,53 @@ def fetch_data_logistic(dataSize=1000,degree=100,coef=1.5,randomGen = np.random.
     y = y.squeeze()
     print('data ready')
     return X, y
+
+def fetch_data_linear(dataSize,input_features,out_features=1,high_dim=None,cov_mode='base',noise_sigma=np.sqrt(0.1),randomGen = np.random.RandomState(seed)):
+    print('fetching data...')
+    V = gen_cov_mat(input_features,cov_mode)
+    X = randomGen.multivariate_normal(np.zeros(input_features),V,dataSize)
+    if(high_dim is None):
+            beta = randomGen.randn(input_features,out_features)           
+    else:
+        if(high_dim>=input_features):
+            print('invalid high dimension')
+            exit()
+        valid_beta = randomGen.randn(high_dim,out_features)
+        empty_beta = np.zeros((input_features-high_dim,out_features))
+        beta = np.vstack((valid_beta,empty_beta))
+    mu = np.matmul(X,beta)
+    eps = noise_sigma*randomGen.randn(*mu.shape)
+    if(out_features==1):
+        y = mu + eps
+    elif(out_features>1):      
+        p = softmax(mu + eps)
+        y = []
+        for i in range(X.shape[0]):
+            sample = randomGen.multinomial(1,p[i,])
+            y.append(np.where(sample==1)[0][0])
+        y = np.array(y)
+    else:
+        print('invalid dimension')
+        exit()
+    print('data ready')
+    return X, y
+    
+def gen_cov_mat(dim,mode,zo=0.5):
+    if(mode=='base'):
+        V = np.eye(dim)
+    elif(mode=='corr'):
+        V = np.full((dim, dim), zo)
+        V = V + (1-zo)*np.eye(dim)
+    elif(mode=='decay_corr'):
+        indices = np.arange(dim)
+        valid_indices = [indices,indices]
+        mesh_indices = np.meshgrid(*valid_indices, sparse=False, indexing='ij')
+        exponent = np.abs(mesh_indices[0]-mesh_indices[1])
+        V = np.power(zo,exponent)
+    else:
+        print('invalid covariance mode')
+        exit()
+    return V
 
 def fetch_data_circle(dataSize=1000,noise=0.1,factor=0.7,randomGen=np.random.RandomState(seed)):
     print('fetching data...') 
@@ -49,12 +96,11 @@ def sample_data(dataSize,X,y,randomGen = np.random.RandomState(seed)):
         exit()
     return sampled_X, sampled_y
 
-
 def split_data_p(X,y,test_size=0.80,randomGen = np.random.RandomState(seed)):
     dataSize = X.shape[0]
     if(test_size>0 and test_size<1):
         test_size = np.int(dataSize*(1-test_size))
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size, stratify = y,random_state=randomGen)
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size, random_state=randomGen)
     return X_train, X_test, y_train, y_test
 
 def split_data_holdout(X,y,test_size=0.75,randomGen = np.random.RandomState(seed)):

@@ -1,6 +1,7 @@
 import itertools
 import torch
 import copy
+import time
 import numpy as np
 from torch import nn
 from util import *
@@ -19,7 +20,7 @@ class modelWrapper:
         self.ifcuda = next(self.model.parameters()).is_cuda
         self.regularization = None
         self.if_optimize_regularization=False
-        self.reg_coordinate_set = []
+        self.reg_coordinate_set = None
         self.coordinate_set = None
         self.fixed_coordinate = None
         self.active_coordinate = None
@@ -63,34 +64,40 @@ class modelWrapper:
                 num_regularization_parameters = len(self.regularization_parameters)
                 if(self.if_optimize_regularization): 
                     if(self.regularization_mode=='all'):
-                        self.reg_coordinate_set = np.arange(len(self.regularization))
+                        self.reg_coordinate_set = list(range(len(self.regularization)))
                     elif(self.regularization_mode=='single'):
                         self.reg_coordinate_set = []
                         for i in range(len(coordinate_set)):
                             cur_reg_coordinate_set = []
                             for j in range(len(coordinate_set[i])):  
                                 cur_reg_coordinate_set.extend(list(range(coordinate_set[i][j]*len(self.regularization),coordinate_set[i][j]*len(self.regularization)+len(self.regularization)))) 
-                            self.reg_coordinate_set.append(np.array(cur_reg_coordinate_set))
+                            self.reg_coordinate_set.append(cur_reg_coordinate_set)
                 else:
-                    if(self.regularization_mode=='all'):
-                        self.reg_coordinate_set = []
-                    elif(self.regularization_mode=='single'):
-                        self.reg_coordinate_set = [[] for i in range(len(coordinate_set))]
+                    self.reg_coordinate_set = None
         else:
             num_regularization_parameters = 0
-            self.reg_coordinate_set = []
+            self.reg_coordinate_set = None
         self.coordinate_set = []
-        for i in range(len(coordinate_set)):
-            if(self.regularization_mode=='all'):
-                self.coordinate_set.append(np.hstack((self.reg_coordinate_set,np.array(coordinate_set[i])+num_regularization_parameters)).astype(int).tolist())
-            elif(self.regularization_mode=='single'):
-                self.coordinate_set.append(np.hstack((self.reg_coordinate_set[i],np.array(coordinate_set[i])+num_regularization_parameters)).astype(int).tolist())
+        if(self.regularization_mode=='all'):
+            if(self.reg_coordinate_set is not None):
+                self.coordinate_set.append(self.reg_coordinate_set)
+        for i in range(len(coordinate_set)):              
+            if(self.regularization_mode=='single'):
+                if(self.reg_coordinate_set is not None):
+                    self.coordinate_set.append(self.reg_coordinate_set[i])
+            self.coordinate_set.append((np.array(coordinate_set[i])+num_regularization_parameters).astype(int).tolist())
         if(fixed_coordinate is not None):
-            self.fixed_coordinate = fixed_coordinate+num_regularization_parameters
+            self.fixed_coordinate = np.array(fixed_coordinate)+num_regularization_parameters
             reg_fixed_coordinate = []
             for i in range(len(fixed_coordinate)):
                 reg_fixed_coordinate.extend(list(range(fixed_coordinate[i]*len(self.regularization),fixed_coordinate[i]*len(self.regularization)+len(self.regularization))))
-            self.fixed_coordinate = np.hstack((self.fixed_coordinate,np.array(reg_fixed_coordinate)))
+            self.fixed_coordinate = np.hstack((np.array(reg_fixed_coordinate),self.fixed_coordinate)).astype(int).tolist()
+        else:
+            self.fixed_coordinate = []
+        # print(self.coordinate_set)
+        # print(self.reg_coordinate_set)
+        # print(self.fixed_coordinate)
+        # exit()
         return  
                   
     def activate_coordinate(self,coordinate):
@@ -115,7 +122,7 @@ class modelWrapper:
             local_param = [param[i] for i in coordinate]
         list_vec_free_grad_params=[]
         for j in range(dataSize):
-            grad_params = torch.autograd.grad(likelihood_batch[j], local_param, create_graph=True, only_inputs=True)
+            grad_params = torch.autograd.grad(likelihood_batch[j], local_param, create_graph = True)
             vec_grad_params = torch.cat(grad_params,dim=0)
             vec_grad_params = vec_grad_params.unsqueeze(1).unsqueeze(0)
             list_vec_free_grad_params.append(vec_grad_params)         
@@ -132,7 +139,7 @@ class modelWrapper:
         J = J/dataSize
         H = []
         for j in sum_grad_params:
-            h = torch.autograd.grad(j, local_param, create_graph=True, only_inputs=True)
+            h = torch.autograd.grad(j, local_param, create_graph=True)
             vec_h = torch.cat(h,dim=0)
             vec_h = vec_h.unsqueeze(0)
             H.append(vec_h)
@@ -171,14 +178,17 @@ class modelWrapper:
         
     def L(self,input,target,if_eval,if_GTIC=False):        
         model = self.model.eval() if if_eval else self.model
+        s1 = time.time()
         output = self.model(input)
         loss_batch = self.criterion(output, target)
         loss = torch.mean(loss_batch)
-        acc = get_acc(output,target)
+        e1 = time.time()
+        print(e1-s1)
         REG = 0
         GTIC = 0
         if(self.regularization is not None):
             i = 0
+            s2 = time.time()
             for p in self.model.parameters():
                 if(self.regularization_mode=='all'):
                     for j in range(len(self.regularization)):
@@ -187,12 +197,22 @@ class modelWrapper:
                     for j in range(len(self.regularization)):
                         REG = REG + torch.exp(self.regularization_parameters[i]) * p.norm(np.float(j+1))  
                         i = i + 1
+            e2 = time.time()
+            print(e2-s2)
+        s3 = time.time()
         if(if_GTIC):
             free_coordinate = list(set(self.active_coordinate)-set(self.fixed_coordinate))
             GTIC = self.GTIC(loss_batch+REG,free_coordinate)
+        e3 = time.time()
+        print(e3-s3)
         regularized_loss = loss + REG + GTIC
-        return loss,regularized_loss,acc
-                
+        return loss,regularized_loss
+        
+    def acc(self,input,target):
+        output = self.model(input)
+        acc = get_acc(output,target)
+        return acc
+        
     def wrap(self):
         if(self.coordinate_set is None or len(self.coordinate_set)==0):
             if(self.optimizer_name=='SGD'):
@@ -212,6 +232,9 @@ class modelWrapper:
                 elif(self.optimizer_name=='Adam'):
                     self.optimizer.append(torch.optim.Adam(cur_param,self.optimizer_param['lr'],self.optimizer_param['betas'],self.optimizer_param['eps'],
                     self.optimizer_param['weight_decay'],self.optimizer_param['amsgrad']))
+                else:
+                    print('Optimizer not supported')
+                    exit()
         return
     
     

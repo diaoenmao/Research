@@ -32,7 +32,7 @@ class Linear(nn.Module):
             valid_input_indices = input_indices[(input_indices>=0)&(input_indices<=self.in_features)]
             valid_indices = [out_indices,valid_input_indices]
             mesh_indices = tuple(np.meshgrid(*valid_indices, sparse=False, indexing='ij'))
-            raveled_indices = np.ravel_multi_index(mesh_indices, dims=(self.out_features,self.in_features+1), order='C') 
+            raveled_indices = np.ravel_multi_index(mesh_indices, dims=(self.out_features,self.in_features+1), order='C')
             raveled_indices = raveled_indices.ravel()
             coordinate_set.append(raveled_indices)
             pivot = pivot+local_size
@@ -46,7 +46,7 @@ class Linear(nn.Module):
         fixed_indices = [out_index,input_indices]
         mesh_indices = tuple(np.meshgrid(*fixed_indices, sparse=False, indexing='ij'))
         raveled_indices = np.ravel_multi_index(mesh_indices, dims=(self.out_features,self.in_features+1), order='C') 
-        fixed_coordinate = raveled_indices.ravel()
+        fixed_coordinate = raveled_indices.ravel().tolist()
         return fixed_coordinate
         
     def forward(self, input):
