@@ -43,50 +43,53 @@ from model import *
 # print(np.mean(efficiency[efficiency!=0]))
 # print(np.std(efficiency[efficiency!=0]))
 
-dataSize = 200
-local_size = 5
-input_features = 10
-output_features = 2
-max_num_epochs = 5
-randomGen = np.random.RandomState(1)
-input_datatype = torch.FloatTensor
-X, y = fetch_data_logistic(dataSize,randomGen = randomGen)
-dataX = X[:,:input_features]
-dataY = y
-model = ccd_Linear(input_features,output_features).type(input_datatype).cuda()
-param = list(model.parameters())
-print(param)
-# splitted_param_0 = list(torch.split(param[0],local_size,0))
-# print(splitted_param_0[0]._grad_fn)
-# splitted_param_0[0].detach_()
-# print(splitted_param_0[0]._grad_fn)
-# print(param[0].requires_grad)
-optimizer = torch.optim.LBFGS(param[:5], lr = 0.3)
-# for epoch in range(max_num_epochs):
-    # def closure():
-        # optimizer.zero_grad()
-        # # ===================forward=====================
-        # loss,regularized_loss,loss_batch,acc = modelwrapper.loss_acc(input,target,self.ifregularize)
-        # output = model(input)
-        # loss_batch = self.criterion(output, target)
-        # loss = torch.mean(loss_batch)
-        # # ===================backward====================
-        # if(self.ifregularize):
-            # print('a')
-            # print(modelwrapper.parameters())
-            # print(loss)
-            # print(regularized_loss)
-            # regularized_loss.backward()
-            # return regularized_loss
-        # else:
-            # loss.backward()
-            # return loss
-    # optimizer.step(closure)       
-    # e = time.time()
+# dataSize = 200
+# local_size = 5
+# input_features = 10
+# output_features = 2
+# max_num_epochs = 5
+# randomGen = np.random.RandomState(1)
+# input_datatype = torch.FloatTensor
+# X, y = fetch_data_logistic(dataSize,randomGen = randomGen)
+# dataX = X[:,:input_features]
+# dataY = y
+# model = ccd_Linear(input_features,output_features).type(input_datatype).cuda()
+# param = list(model.parameters())
+# print(param)
+# # splitted_param_0 = list(torch.split(param[0],local_size,0))
+# # print(splitted_param_0[0]._grad_fn)
+# # splitted_param_0[0].detach_()
+# # print(splitted_param_0[0]._grad_fn)
+# # print(param[0].requires_grad)
+# optimizer = torch.optim.LBFGS(param[:5], lr = 0.3)
+# # for epoch in range(max_num_epochs):
+    # # def closure():
+        # # optimizer.zero_grad()
+        # # # ===================forward=====================
+        # # loss,regularized_loss,loss_batch,acc = modelwrapper.loss_acc(input,target,self.ifregularize)
+        # # output = model(input)
+        # # loss_batch = self.criterion(output, target)
+        # # loss = torch.mean(loss_batch)
+        # # # ===================backward====================
+        # # if(self.ifregularize):
+            # # print('a')
+            # # print(modelwrapper.parameters())
+            # # print(loss)
+            # # print(regularized_loss)
+            # # regularized_loss.backward()
+            # # return regularized_loss
+        # # else:
+            # # loss.backward()
+            # # return loss
+    # # optimizer.step(closure)       
+    # # e = time.time()
             
-exit()
+# exit()
 
-
+# TAG ='high_dim'
+# for i in range(5):
+    # train_loss_iter,train_regularized_loss_iter,train_acc_iter,final_train_loss,final_train_acc,final_test_loss,final_test_acc,final_timing = load('./output/{}_{}.pkl'.format(TAG,i))
+    # print(np.mean(final_test_loss))
 
 
 

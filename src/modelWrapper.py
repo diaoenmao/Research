@@ -24,7 +24,6 @@ class modelWrapper:
         self.coordinate_set = None
         self.fixed_coordinate = None
         self.active_coordinate = None
-        self.inactive_coordinate = None
         
     def set_optimizer_name(self,optimizer_name):
         self.optimizer_name = optimizer_name
@@ -78,11 +77,11 @@ class modelWrapper:
             num_regularization_parameters = 0
             self.reg_coordinate_set = None
         self.coordinate_set = []
-        if(self.regularization_mode=='all'):
-            if(self.reg_coordinate_set is not None):
-                self.coordinate_set.append(self.reg_coordinate_set)
-        for i in range(len(coordinate_set)):              
-            if(self.regularization_mode=='single'):
+        for i in range(len(coordinate_set)): 
+            if(self.regularization_mode=='all'):
+                if(self.reg_coordinate_set is not None):
+                    self.coordinate_set.append(self.reg_coordinate_set)
+            elif(self.regularization_mode=='single'):
                 if(self.reg_coordinate_set is not None):
                     self.coordinate_set.append(self.reg_coordinate_set[i])
             self.coordinate_set.append((np.array(coordinate_set[i])+num_regularization_parameters).astype(int).tolist())
@@ -94,25 +93,24 @@ class modelWrapper:
             self.fixed_coordinate = np.hstack((np.array(reg_fixed_coordinate),self.fixed_coordinate)).astype(int).tolist()
         else:
             self.fixed_coordinate = []
-        # print(self.coordinate_set)
-        # print(self.reg_coordinate_set)
-        # print(self.fixed_coordinate)
-        # exit()
         return  
                   
     def activate_coordinate(self,coordinate):
         param = self.parameters()
-        all_coordinate = list(range(len(param)))
+        if(self.active_coordinate is None):
+            all_coordinate = list(range(len(param)))
+            for i in all_coordinate:
+                param[i].requires_grad_(False)
+        else:
+            for i in self.active_coordinate:
+                param[i].requires_grad_(False)
         self.active_coordinate = coordinate
-        self.inactive_coordinate = list(set(all_coordinate)-set(self.active_coordinate))
         for i in self.active_coordinate:
-            param[i].requires_grad_(True) 
-        for i in self.inactive_coordinate:
-            param[i].requires_grad_(False)
+            param[i].requires_grad_(True)                    
         return
         
     def GTIC(self,loss_batch,coordinate):
-        print(coordinate)
+        #print(coordinate)
         dataSize = loss_batch.size(0)
         likelihood_batch = -loss_batch
         param = self.parameters()
@@ -120,6 +118,7 @@ class modelWrapper:
             local_param = param
         else:
             local_param = [param[i] for i in coordinate]
+        #print(local_param)
         list_vec_free_grad_params=[]
         for j in range(dataSize):
             grad_params = torch.autograd.grad(likelihood_batch[j], local_param, create_graph = True)
@@ -164,31 +163,29 @@ class modelWrapper:
             GTIC = tVMJ/dataSize
             if(GTIC < 0):
                 print('numerically unstable, negative')
-                print('effective num of paramters')
-                print(float(tVMJ))
+                #print('effective num of paramters')
+                #print(float(tVMJ))
                 GTIC = 0
             else:
-                print('effective num of paramters')
-                print(float(tVMJ))
+                a = 0
+               # print('effective num of paramters')
+                #print(float(tVMJ))
         except RuntimeError as e:
             print(e)
             print('numerically unstable, not invertable')
             GTIC = 0
+        #exit()
         return GTIC
         
     def L(self,input,target,if_eval,if_GTIC=False):        
         model = self.model.eval() if if_eval else self.model
-        s1 = time.time()
         output = self.model(input)
         loss_batch = self.criterion(output, target)
         loss = torch.mean(loss_batch)
-        e1 = time.time()
-        print(e1-s1)
         REG = 0
         GTIC = 0
         if(self.regularization is not None):
             i = 0
-            s2 = time.time()
             for p in self.model.parameters():
                 if(self.regularization_mode=='all'):
                     for j in range(len(self.regularization)):
@@ -197,14 +194,9 @@ class modelWrapper:
                     for j in range(len(self.regularization)):
                         REG = REG + torch.exp(self.regularization_parameters[i]) * p.norm(np.float(j+1))  
                         i = i + 1
-            e2 = time.time()
-            print(e2-s2)
-        s3 = time.time()
         if(if_GTIC):
             free_coordinate = list(set(self.active_coordinate)-set(self.fixed_coordinate))
             GTIC = self.GTIC(loss_batch+REG,free_coordinate)
-        e3 = time.time()
-        print(e3-s3)
         regularized_loss = loss + REG + GTIC
         return loss,regularized_loss
         
