@@ -28,12 +28,14 @@ ifregularize = config.PARAM['ifregularize']
 input_datatype = config.PARAM['input_datatype']
 target_datatype = config.PARAM['target_datatype']
 if_GTIC = config.PARAM['if_GTIC']
+init_seed = 0
 num_Experiments = 100
+seeds = list(range(init_seed,init_seed+num_Experiments))
 
 def main():
     remove_dir(['data/stats','model','output'])
-    for i in range(num_Experiments):
-        runExperiment(i,'{}_{}'.format(TAG,i))
+    for i in range(len(seeds)):
+        runExperiment(seeds[i],'{}_{}'.format(TAG,i))
     process_output()
     return
 
@@ -77,7 +79,7 @@ def runExperiment(seed,TAG):
     coordinate_set = model.coordinate_set(config.PARAM['local_size'])
     fixed_coordinate = model.fixed_coordinate()
     mw = modelWrapper(model,config.PARAM['optimizer_name'],device)
-    mw.set_optimizer_param(config.PARAM['optimizer_param'])
+    mw.set_optimizer_param(config.PARAM['optimizer_param'],config.PARAM['reg_optimizer_param'])
     mw.set_criterion(criterion)
     regularization = np.array(config.PARAM['regularization'])
     regularization_jitter = 0.1
@@ -85,14 +87,18 @@ def runExperiment(seed,TAG):
     mw.set_regularization(regularization,config.PARAM['if_optimize_regularization'],config.PARAM['regularization_mode'])
     mw.set_coordinate(coordinate_set,fixed_coordinate)
     mw.wrap()
-
+    
+    # param = list(mw.parameters())
+    # print_param = [float(param[i]) for i in range(len(param))]
+    # print(print_param)
+    
     train_loss_iter = []
     train_regularized_loss_iter = []
     train_acc_iter = []
             
     optimizers = mw.optimizer
     head_tracker = 0
-    stochastic_tracker = [None]*len(optimizers)
+    stochastic_tracker = [None]*len(mw.coordinate_set)
     e = 0
     while(e<=max_num_epochs):
         stochastic_tracker[1:] = stochastic_tracker[:-1]
@@ -108,19 +114,18 @@ def runExperiment(seed,TAG):
                 head_tracker = 0
                 continue
         cur_tracker = stochastic_tracker[i]
-        while(cur_tracker is not None and i<len(optimizers)):
-            #print(cur_tracker)
+        while(cur_tracker is not None and i<len(mw.coordinate_set)):
             coordinate = mw.coordinate_set[i]
             mw.activate_coordinate(coordinate)
-            optimizer = optimizers[i]
+            optimizer = optimizers[mw.optimizer_ix[i]]
             input,target = list_train_loader[cur_tracker]
             input,_ = normalize(input,TAG=TAG)        
             optimizer.zero_grad()
             loss,regularized_loss = mw.L(input,target,False,if_GTIC)
             train_loss_iter.append(float(loss))
             train_regularized_loss_iter.append(float(regularized_loss))
-            #print('loss')
-            #print(float(loss))
+            # print('loss')
+            # print(float(loss))
             if(if_classification):
                 acc = mw.acc(input,target)
                 train_acc_iter.append(float(acc))
@@ -133,7 +138,7 @@ def runExperiment(seed,TAG):
             #print('step')
             optimizer.step()
             i = i + 1
-            if(i>=len(optimizers)):
+            if(i>=len(mw.coordinate_set)):
                 break
             cur_tracker = stochastic_tracker[i]
         if(head_tracker is None):

@@ -86,10 +86,16 @@ from model import *
             
 # exit()
 
-# TAG ='high_dim'
-# for i in range(5):
-    # train_loss_iter,train_regularized_loss_iter,train_acc_iter,final_train_loss,final_train_acc,final_test_loss,final_test_acc,final_timing = load('./output/{}_{}.pkl'.format(TAG,i))
-    # print(np.mean(final_test_loss))
+TAG ='high_dim'
+num_Experiment = 100
+l_final_train_loss = np.zeros(num_Experiment)
+l_final_test_loss = np.zeros(num_Experiment)
+for i in range(num_Experiment):
+    train_loss_iter,train_regularized_loss_iter,train_acc_iter,final_train_loss,final_train_acc,final_test_loss,final_test_acc,final_timing = load('./output/{}_{}.pkl'.format(TAG,i))
+    l_final_train_loss[i] = final_train_loss
+    l_final_test_loss[i] = final_test_loss
+print(np.mean(l_final_train_loss[l_final_train_loss<2]))
+print(np.mean(l_final_test_loss[l_final_test_loss<2]))
 
 
 

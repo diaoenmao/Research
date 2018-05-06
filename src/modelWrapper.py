@@ -16,6 +16,9 @@ class modelWrapper:
         self.optimizer_param = {'lr':1e-3,'momentum':0,'dampening':0,'weight_decay':0,'nesterov':False,
         'betas':(0.9, 0.999),'eps':1e-8,'amsgrad':False,
         'max_iter':20,'max_eval':None,'tolerance_grad':1e-05,'tolerance_change':1e-09,'history_size':100,'line_search_fn':None}
+        self.reg_optimizer_param = {'lr':1e-3,'momentum':0,'dampening':0,'weight_decay':0,'nesterov':False,
+        'betas':(0.9, 0.999),'eps':1e-8,'amsgrad':False,
+        'max_iter':20,'max_eval':None,'tolerance_grad':1e-05,'tolerance_change':1e-09,'history_size':100,'line_search_fn':None}
         self.criterion = nn.NLLLoss(reduce=False)
         self.ifcuda = next(self.model.parameters()).is_cuda
         self.regularization = None
@@ -28,9 +31,11 @@ class modelWrapper:
     def set_optimizer_name(self,optimizer_name):
         self.optimizer_name = optimizer_name
         
-    def set_optimizer_param(self,optimizer_param):
+    def set_optimizer_param(self,optimizer_param,reg_optimizer_param=None):
         self.optimizer_param = {**self.optimizer_param, **optimizer_param}
-    
+        if(reg_optimizer_param is not None):
+            self.reg_optimizer_param = {**self.reg_optimizer_param, **reg_optimizer_param}
+                
     def set_criterion(self,criterion):
         self.criterion = criterion
         
@@ -204,29 +209,47 @@ class modelWrapper:
         output = self.model(input)
         acc = get_acc(output,target)
         return acc
+    
+    def gen_optimizer(self,optimizer_name,param,optimizer_dict):
+        if(optimizer_name=='SGD'):
+            opt = torch.optim.SGD(param,optimizer_dict['lr'],optimizer_dict['momentum'],optimizer_dict['dampening'],
+            optimizer_dict['weight_decay'],optimizer_dict['nesterov'])
+        elif(self.optimizer_name=='Adam'):
+            opt = torch.optim.Adam(param,optimizer_dict['lr'],optimizer_dict['betas'],optimizer_dict['eps'],
+            optimizer_dict['weight_decay'],optimizer_dict['amsgrad'])
+        else:
+            print('Optimizer not supported')
+            exit()
+        return opt
         
     def wrap(self):
         if(self.coordinate_set is None or len(self.coordinate_set)==0):
-            if(self.optimizer_name=='SGD'):
-                self.optimizer = torch.optim.SGD(self.parameters(),self.optimizer_param['lr'],self.optimizer_param['momentum'],self.optimizer_param['dampening'],
-                self.optimizer_param['weight_decay'],self.optimizer_param['nesterov']) 
-            elif(self.optimizer_name=='Adam'):
-                self.optimizer = torch.optim.Adam(self.parameters(),self.optimizer_param['lr'],self.optimizer_param['betas'],self.optimizer_param['eps'],
-                self.optimizer_param['weight_decay'],self.optimizer_param['amsgrad']) 
+                self.optimizer = self.gen_optimizer(self.optimizer_name,self.parameters(),self.optimizer_param)
         else:          
             self.optimizer=[]
+            self.optimizer_ix = []
             param = list(self.parameters())
+            reg_optimizer_ix_tracker = 0
             for i in range(len(self.coordinate_set)):               
                 cur_param = [param[j] for j in self.coordinate_set[i]]
-                if(self.optimizer_name=='SGD'):
-                    self.optimizer.append(torch.optim.SGD(cur_param,self.optimizer_param['lr'],self.optimizer_param['momentum'],self.optimizer_param['dampening'],
-                    self.optimizer_param['weight_decay'],self.optimizer_param['nesterov']))
-                elif(self.optimizer_name=='Adam'):
-                    self.optimizer.append(torch.optim.Adam(cur_param,self.optimizer_param['lr'],self.optimizer_param['betas'],self.optimizer_param['eps'],
-                    self.optimizer_param['weight_decay'],self.optimizer_param['amsgrad']))
+                if(not self.if_optimize_regularization):
+                    self.optimizer.append(self.gen_optimizer(self.optimizer_name,cur_param,self.optimizer_param))
+                    self.optimizer_ix.append(i)
                 else:
-                    print('Optimizer not supported')
-                    exit()
+                    if(i%2==0):
+                        if(self.regularization_mode == 'all'):
+                            if(i==0):
+                                self.optimizer.append(self.gen_optimizer(self.optimizer_name,cur_param,self.reg_optimizer_param))
+                            self.optimizer_ix.append(0)
+                        elif(self.regularization_mode == 'single'):
+                            self.optimizer.append(self.gen_optimizer(self.optimizer_name,cur_param,self.reg_optimizer_param))
+                            self.optimizer_ix.append(i)
+                    else:
+                        self.optimizer.append(self.gen_optimizer(self.optimizer_name,cur_param,self.optimizer_param))
+                        if(self.regularization_mode == 'all'):
+                            self.optimizer_ix.append(i//2+1)
+                        else:
+                            self.optimizer_ix.append(i)
         return
     
     
