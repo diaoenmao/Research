@@ -10,7 +10,7 @@ from modelselect import *
 from modelWrapper import *
 
 
-TAG = 'high_dim'
+TAG = 'base_high_dim'
 dataSize = 1100
 input_features = 100
 output_features = 1
@@ -27,7 +27,6 @@ max_num_epochs = config.PARAM['max_num_epochs']
 if_regularize = config.PARAM['if_regularize']
 input_datatype = config.PARAM['input_datatype']
 target_datatype = config.PARAM['target_datatype']
-if_GTIC = config.PARAM['if_GTIC']
 if_load = config.PARAM['if_load']
 if_verbose = config.PARAM['if_verbose']
 init_seed = 0
@@ -75,16 +74,17 @@ def runExperiment(seed,TAG):
     X_train, X_test, y_train, y_test = split_data_p(X,y,test_size=config.PARAM['test_size'],randomGen = randomGen)
 
     get_data_stats(X_train,TAG=TAG)
-    train_loader = get_data_loader(X_train,y_train,input_datatype,target_datatype,device,config.PARAM['batch_size'])
+    if(config.PARAM['optimizer_name']=='LBFGS'):
+        train_loader = get_data_loader(X_train,y_train,input_datatype,target_datatype,device,X_train.shape[0])
+    else:
+        train_loader = get_data_loader(X_train,y_train,input_datatype,target_datatype,device,config.PARAM['batch_size'])
     test_loader = get_data_loader(X_test,y_test,input_datatype,target_datatype,device,config.PARAM['batch_size'])
     list_train_loader = list(train_loader)
 
     criterion = nn.CrossEntropyLoss(reduce=False) if if_classification else nn.MSELoss(reduce=False)
     model = Linear(input_features,output_features).to(device)
     if(if_load):
-        model = load_model(model,'./model/base_{}.pth'.format(TAG))
-    coordinate_set = model.coordinate_set(config.PARAM['local_size'])
-    fixed_coordinate = model.fixed_coordinate()
+        model = load_model(model,'./model/{}.pth'.format(TAG))
     mw = modelWrapper(model,config.PARAM['optimizer_name'],device)
     mw.set_optimizer_param(config.PARAM['optimizer_param'],config.PARAM['reg_optimizer_param'])
     mw.set_criterion(criterion)   
@@ -95,7 +95,6 @@ def runExperiment(seed,TAG):
     else:
         regularization = config.PARAM['regularization']
     mw.set_regularization(regularization,config.PARAM['if_optimize_regularization'],config.PARAM['regularization_mode'])
-    mw.set_coordinate(coordinate_set,fixed_coordinate)
     mw.wrap()
     
     eval(mw,train_loader,test_loader,TAG,if_classification)
@@ -107,64 +106,50 @@ def runExperiment(seed,TAG):
     train_regularized_loss_iter = []
     train_acc_iter = []
             
-    optimizers = mw.optimizer
-    head_tracker = 0
-    stochastic_tracker = [None]*len(mw.coordinate_set)
-    e = 0
-    while(e<=max_num_epochs):
-        stochastic_tracker[1:] = stochastic_tracker[:-1]
-        stochastic_tracker[0] = head_tracker    
-        i = next((i for i, j in enumerate(stochastic_tracker) if j is not None), None)
-        # print(e)
-        # print(stochastic_tracker)
-        # print(i)
-        if(i is None):
-            if(e==max_num_epochs):
-                break
-            else:
-                head_tracker = 0
-                continue
-        cur_tracker = stochastic_tracker[i]
-        while(cur_tracker is not None and i<len(mw.coordinate_set)):
-            coordinate = mw.coordinate_set[i]
-            mw.activate_coordinate(coordinate)
-            optimizer = optimizers[mw.optimizer_ix[i]]
-            input,target = list_train_loader[cur_tracker]
-            input,_ = normalize(input,TAG=TAG)        
-            optimizer.zero_grad()
-            loss,regularized_loss = mw.L(input,target,False,if_GTIC)
-            train_loss_iter.append(float(loss))
-            train_regularized_loss_iter.append(float(regularized_loss))
-            if(if_verbose):
-                print('loss')
-                print(float(loss))
-                print('regularized_loss')
-                print(float(regularized_loss))
-            if(if_classification):
-                acc = mw.acc(input,target)
-                train_acc_iter.append(float(acc))
-                if(if_verbose):
-                    print('acc')
-                    print(float(acc))
-            if(if_regularize):
-                regularized_loss.backward()
-            else:
-                loss.backward()
-            optimizer.step()
-            i = i + 1
-            if(i>=len(mw.coordinate_set)):
-                break
-            cur_tracker = stochastic_tracker[i]
-        if(head_tracker is None):
-            head_tracker = None
-        elif(head_tracker == len(list_train_loader)-1):
-            head_tracker = None
+    optimizer = mw.optimizer
+    for i in range(max_num_epochs):
+        if(config.PARAM['optimizer_name']=='LBFGS'):
+            for input,target in train_loader:
+                input,_ = normalize(input,TAG=TAG) 
+                def closure():
+                    optimizer.zero_grad()
+                    loss,regularized_loss = mw.L(input,target,False)
+                    train_loss_iter.append(float(loss))
+                    train_regularized_loss_iter.append(float(regularized_loss))
+                    if(if_verbose):
+                        print('loss')
+                        print(float(loss))
+                    if(if_classification):
+                        acc = mw.acc(input,target)
+                        train_acc_iter.append(float(acc))
+                    if(if_regularize):
+                        regularized_loss.backward()
+                        return regularized_loss
+                    else:
+                        loss.backward()
+                        return loss
+                optimizer.step(closure)    
         else:
-            head_tracker = head_tracker + 1
-        if(stochastic_tracker[0]==len(list_train_loader)-1):
-            head_tracker = None
-        elif(stochastic_tracker[-1]==len(list_train_loader)-1):
-            e = e + 1
+            for input,target in train_loader:
+                input,_ = normalize(input,TAG=TAG)        
+                optimizer.zero_grad()
+                loss,regularized_loss = mw.L(input,target,False)
+                train_loss_iter.append(float(loss))
+                train_regularized_loss_iter.append(float(regularized_loss))
+                if(if_verbose):
+                    print('loss')
+                    print(float(loss))
+                if(if_classification):
+                    acc = mw.acc(input,target)
+                    train_acc_iter.append(float(acc))
+                    if(if_verbose):
+                        print('acc')
+                        print(float(acc))
+                if(if_regularize):
+                    regularized_loss.backward()
+                else:
+                    loss.backward()
+                optimizer.step()
 
     e = time.time()
     final_timing = e-s
@@ -177,37 +162,7 @@ def runExperiment(seed,TAG):
         if(if_classification):
             show([train_acc_iter],['acc'])
 
-    final_train_loss = 0                    
-    final_train_acc = 0
-    total_train_size = 0
-    for input,target in train_loader:
-        batch_size = input.size(0)
-        input,_ = normalize(input,TAG=TAG)
-        total_train_size += batch_size
-        loss,_ = mw.L(input,target,True)
-        final_train_loss += loss*batch_size
-        if(if_classification):
-            acc = mw.acc(input,target)
-            final_train_acc += acc*batch_size
-    final_train_loss = float(final_train_loss/total_train_size)
-    final_train_acc = float(final_train_acc/total_train_size)
-    print('train loss: {}, train acc: {} of size {}'.format(final_train_loss,final_train_acc,total_train_size))
-
-    final_test_loss = 0                    
-    final_test_acc = 0
-    total_test_size = 0
-    for input,target in test_loader:
-        batch_size = input.size(0)
-        input,_ = normalize(input,TAG=TAG)
-        total_test_size += batch_size  
-        loss,_ = mw.L(input,target,True)
-        final_test_loss += loss*batch_size
-        if(if_classification):
-            acc = mw.acc(input,target)
-            final_test_acc += acc*batch_size
-    final_test_loss = float(final_test_loss/total_test_size)
-    final_test_acc = float(final_test_acc/total_test_size)
-    print('test loss: {}, test acc: {} of size {}'.format(final_test_loss,final_test_acc,total_test_size))
+    final_train_loss,final_train_acc,final_test_loss,final_test_acc = eval(mw,train_loader,test_loader,TAG,if_classification)
     
     print('Experiment {} complete'.format(seed))
     if(config.PARAM['if_save']):

@@ -12,7 +12,7 @@ import numpy as np
 import seaborn as sns
 from torch.autograd import Variable
 from matplotlib import pyplot as plt
-        
+
 def save(input,dir,protocol = 3):
     dirname = os.path.dirname(dir)
     if not os.path.exists(dirname):
@@ -30,7 +30,7 @@ def save_model(model, dir = './model/model.pth'):
     torch.save(model.state_dict(), dir)
     return
     
-def load_model(model, ifcuda, dir = './model/model.pth'):
+def load_model(model, dir = './model/model.pth'):
     checkpoint = torch.load(dir)
     if isinstance(checkpoint, dict) and 'state_dict' in checkpoint:       
         model.load_state_dict(checkpoint['state_dict'])
@@ -117,7 +117,7 @@ def gen_hidden_layers(max_num_nodes,init_size=None,step_size=None):
         hidden_layers.extend(list(itertools.product(*num_nodes)))
         del num_nodes[-1]   
     return hidden_layers
-
+    
 # ===================Function===================== 
 def p_inverse(A):
     pinv = (A.t().matmul(A)).inverse().matmul(A.t())

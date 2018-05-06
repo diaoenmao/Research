@@ -231,3 +231,37 @@ def denormalize(norm_input,norm_target=None,TAG=''):
     else:
         denorm_target = None
     return denorm_input,denorm_target
+
+def eval(mw,train_loader,test_loader,TAG,if_classification=False):
+    final_train_loss = 0                    
+    final_train_acc = 0
+    total_train_size = 0
+    for input,target in train_loader:
+        batch_size = input.size(0)
+        input,_ = normalize(input,TAG=TAG)
+        total_train_size += batch_size
+        loss,_ = mw.L(input,target,True)
+        final_train_loss += loss*batch_size
+        if(if_classification):
+            acc = mw.acc(input,target)
+            final_train_acc += acc*batch_size
+    final_train_loss = float(final_train_loss/total_train_size)
+    final_train_acc = float(final_train_acc/total_train_size)
+    print('train loss: {}, train acc: {} of size {}'.format(final_train_loss,final_train_acc,total_train_size))
+
+    final_test_loss = 0                    
+    final_test_acc = 0
+    total_test_size = 0
+    for input,target in test_loader:
+        batch_size = input.size(0)
+        input,_ = normalize(input,TAG=TAG)
+        total_test_size += batch_size  
+        loss,_ = mw.L(input,target,True)
+        final_test_loss += loss*batch_size
+        if(if_classification):
+            acc = mw.acc(input,target)
+            final_test_acc += acc*batch_size
+    final_test_loss = float(final_test_loss/total_test_size)
+    final_test_acc = float(final_test_acc/total_test_size)
+    print('test loss: {}, test acc: {} of size {}'.format(final_test_loss,final_test_acc,total_test_size))
+    return final_train_loss,final_train_acc,final_test_loss,final_test_acc

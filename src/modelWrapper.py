@@ -217,6 +217,9 @@ class modelWrapper:
         elif(self.optimizer_name=='Adam'):
             opt = torch.optim.Adam(param,optimizer_dict['lr'],optimizer_dict['betas'],optimizer_dict['eps'],
             optimizer_dict['weight_decay'],optimizer_dict['amsgrad'])
+        elif(self.optimizer_name=='LBFGS'):
+            opt = torch.optim.LBFGS(param,optimizer_dict['lr'],optimizer_dict['max_iter'],optimizer_dict['max_eval'],
+            optimizer_dict['tolerance_grad'],optimizer_dict['tolerance_change'],optimizer_dict['history_size'],optimizer_dict['line_search_fn'])
         else:
             print('Optimizer not supported')
             exit()
@@ -224,11 +227,14 @@ class modelWrapper:
         
     def wrap(self):
         if(self.coordinate_set is None or len(self.coordinate_set)==0):
+            if(not self.if_optimize_regularization):
+                self.optimizer = self.gen_optimizer(self.optimizer_name,self.model.parameters(),self.optimizer_param)
+            else:              
                 self.optimizer = self.gen_optimizer(self.optimizer_name,self.parameters(),self.optimizer_param)
         else:          
             self.optimizer=[]
             self.optimizer_ix = []
-            param = list(self.parameters())
+            param = self.parameters()
             reg_optimizer_ix_tracker = 0
             for i in range(len(self.coordinate_set)):               
                 cur_param = [param[j] for j in self.coordinate_set[i]]
