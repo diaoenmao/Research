@@ -86,17 +86,24 @@ from model import *
             
 # exit()
 
-TAG ='high_dim'
-num_Experiment = 100
-l_final_train_loss = np.zeros(num_Experiment)
-l_final_test_loss = np.zeros(num_Experiment)
-for i in range(num_Experiment):
-    train_loss_iter,train_regularized_loss_iter,train_acc_iter,final_train_loss,final_train_acc,final_test_loss,final_test_acc,final_timing = load('./output/{}_{}.pkl'.format(TAG,i))
-    l_final_train_loss[i] = final_train_loss
-    l_final_test_loss[i] = final_test_loss
-print(np.mean(l_final_train_loss[l_final_train_loss<2]))
-print(np.mean(l_final_test_loss[l_final_test_loss<2]))
+# TAG ='high_dim'
+# num_Experiment = 100
+# l_final_train_loss = np.zeros(num_Experiment)
+# l_final_test_loss = np.zeros(num_Experiment)
+# for i in range(num_Experiment):
+    # train_loss_iter,train_regularized_loss_iter,train_acc_iter,final_train_loss,final_train_acc,final_test_loss,final_test_acc,final_timing = load('./output/{}_{}.pkl'.format(TAG,i))
+    # l_final_train_loss[i] = final_train_loss
+    # l_final_test_loss[i] = final_test_loss
+# print(np.mean(l_final_train_loss[l_final_train_loss<2]))
+# print(np.mean(l_final_test_loss[l_final_test_loss<2]))
 
-
-
+a = np.random.randn(100,5)
+b = np.matmul(a.T,a)
+print(b)
+a_1 = np.expand_dims(a, axis=2)
+a_2 = np.transpose(a_1,(0,2,1))
+print(a_1.shape)
+print(a_2.shape)
+a_3 = np.sum(np.matmul(a_1,a_2),0)
+print(a_3)
 

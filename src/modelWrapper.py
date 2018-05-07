@@ -113,9 +113,9 @@ class modelWrapper:
         for i in self.active_coordinate:
             param[i].requires_grad_(True)                    
         return
-        
-    def GTIC(self,loss_batch,coordinate):
-        #print(coordinate)
+    
+    def fast_GTIC(self,loss_batch,coordinate):
+        s = time.time()
         dataSize = loss_batch.size(0)
         likelihood_batch = -loss_batch
         param = self.parameters()
@@ -123,22 +123,53 @@ class modelWrapper:
             local_param = param
         else:
             local_param = [param[i] for i in coordinate]
-        #print(local_param)
         list_vec_free_grad_params=[]
         for j in range(dataSize):
             grad_params = torch.autograd.grad(likelihood_batch[j], local_param, create_graph = True)
             vec_grad_params = torch.cat(grad_params,dim=0)
-            vec_grad_params = vec_grad_params.unsqueeze(1).unsqueeze(0)
+            vec_grad_params = vec_grad_params.unsqueeze(0)
+            list_vec_free_grad_params.append(vec_grad_params)         
+        grad_params = torch.cat(list_vec_free_grad_params,dim=0)
+        J = torch.var(grad_params,dim=0)
+        e1 = time.time()
+        s2 = time.time()
+        sum_grad_params = torch.sum(grad_params,dim=0)
+        H = []
+        for j in range(len(local_param)):
+            h = torch.autograd.grad(sum_grad_params[j], local_param[j], create_graph=True)
+            H.append(h[0])
+        H = torch.cat(H,dim=0)
+        s3 = time.time()
+        V = -H/dataSize
+        inv_V = V.pow(-1)
+        tVMJ = torch.sum(inv_V * J)
+        GTIC = tVMJ/dataSize
+        e = time.time()
+        print(e-s)
+        return GTIC
+        
+    def GTIC(self,loss_batch,coordinate):
+        dataSize = loss_batch.size(0)
+        likelihood_batch = -loss_batch
+        param = self.parameters()
+        if(coordinate is None):
+            local_param = param
+        else:
+            local_param = [param[i] for i in coordinate]
+        list_vec_free_grad_params=[]
+        for j in range(dataSize):
+            grad_params = torch.autograd.grad(likelihood_batch[j], local_param, create_graph = True)
+            vec_grad_params = torch.cat(grad_params,dim=0)
+            vec_grad_params = vec_grad_params.unsqueeze(0)
             list_vec_free_grad_params.append(vec_grad_params)         
         grad_params = torch.cat(list_vec_free_grad_params,dim=0)
         sum_grad_params = torch.sum(grad_params,dim=0)
-        non_zero_idx_J = torch.nonzero(sum_grad_params[:,0])
+        non_zero_idx_J = torch.nonzero(sum_grad_params)
         if(non_zero_idx_J.size()==torch.Size([])):
             print('empty J')
             return 0
-        grad_params_T = grad_params.transpose(1,2)
-        J_batch = torch.matmul(grad_params,grad_params_T)
-        J = torch.sum(J_batch,dim=0)
+        grad_params_T = grad_params.transpose(0,1)
+        J = torch.matmul(grad_params_T,grad_params)
         J = J[non_zero_idx_J,non_zero_idx_J.view(1,-1)]   
         J = J/dataSize
         H = []
@@ -168,18 +199,11 @@ class modelWrapper:
             GTIC = tVMJ/dataSize
             if(GTIC < 0):
                 print('numerically unstable, negative')
-                #print('effective num of paramters')
-                #print(float(tVMJ))
                 GTIC = 0
-            else:
-                a = 0
-               # print('effective num of paramters')
-                #print(float(tVMJ))
         except RuntimeError as e:
             print(e)
             print('numerically unstable, not invertable')
             GTIC = 0
-        #exit()
         return GTIC
         
     def L(self,input,target,if_eval,if_GTIC=False):        
@@ -201,7 +225,7 @@ class modelWrapper:
                         i = i + 1
         if(if_GTIC):
             free_coordinate = list(set(self.active_coordinate)-set(self.fixed_coordinate))
-            GTIC = self.GTIC(loss_batch+REG,free_coordinate)
+            GTIC = self.fast_GTIC(loss_batch+REG,free_coordinate)
         regularized_loss = loss + REG + GTIC
         return loss,regularized_loss
         
