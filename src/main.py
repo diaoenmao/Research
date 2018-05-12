@@ -2,6 +2,7 @@ import shutil
 import torch
 import config
 import time
+import torch.backends.cudnn as cudnn
 from torch import nn
 from torch.autograd import Variable
 from torch.optim.lr_scheduler import StepLR
@@ -23,6 +24,7 @@ num_Experiments = 1
 output_feature = 10
 
 def main():
+    cudnn.benchmark = True
     if(if_resume):
         checkpoint = torch.load('./model/checkpoint.pth')
         init_seed = checkpoint['seed']
