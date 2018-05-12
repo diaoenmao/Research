@@ -22,7 +22,7 @@ def save(input,dir,protocol = 2):
     return
 
 def load(dir):
-    return pickle.load(open(dir, "rb" ))        
+    return torch.load(dir)        
 
 def save_model(model, dir = './model/model.pth'):
     dirname = os.path.dirname(dir)
