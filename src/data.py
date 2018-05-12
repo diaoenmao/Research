@@ -1,40 +1,43 @@
 import numpy as np
 import torch
+import os
 import torch.utils.data as data_utils
+import torchvision.transforms as transforms
+import torchvision.datasets as datasets
 from sklearn.utils import shuffle
-from sklearn import datasets
 from sklearn.model_selection import train_test_split
 from sklearn.model_selection import KFold
 from torch.utils.data import DataLoader
 from util import *
 
 
-
-mld_dataName = 'MNIST original'
-mld_data_dir = './data/'
 seed = 1234
 
-def fetch_data_mld(dataSize,valid_target=np.arange(10),randomGen = np.random.RandomState(seed)):
+def fetch_data(data_name,batch_size):
     print('fetching data...')
-    data = datasets.fetch_mldata(mld_dataName, data_home=mld_data_dir)
-    X = data.data
-    y = data.target
-    X,y = filter_data(X,y,valid_target)
-    if(dataSize!=None):
-        X,y = sample_data(dataSize,X,y,randomGen=randomGen)
-    print('data ready')
-    return X, y
-
-def fetch_data_logistic(dataSize,degree=100,coef=1.5,randomGen = np.random.RandomState(seed)):
-    print('fetching data...') 
-    X = randomGen.randn(dataSize,degree)
-    beta = 10 / np.power(range(1,degree+1),coef)
-    mu = X.dot(beta.reshape((degree,1)))
-    y = randomGen.binomial(1, 1/(1 + np.exp(-mu)), size=None)  
-    y = y.squeeze()
-    print('data ready')
-    return X, y
-
+    stats_name = './data/stats/stats_{}.pkl'.format(data_name)
+    if(os.path.exists(stats_name)):
+        mean,std = load(stats_name)
+    else:
+        trainset = eval('datasets.{data_name}(root=\'./data/{data_name}\', train=True, download=True,transform=transforms.ToTensor())'.format(data_name=data_name))
+        mean,std = get_mean_and_std(trainset,data_name)
+    if(data_name=='CIFAR10'):
+        transform_train = transforms.Compose([
+            # transforms.RandomCrop(32, padding=4),
+            # transforms.RandomHorizontalFlip(),
+            transforms.ToTensor(),
+            transforms.Normalize(mean, std)
+        ])
+        transform_test = transforms.Compose([
+            transforms.ToTensor(),
+            transforms.Normalize(mean, std)
+        ])     
+    trainset = datasets.CIFAR10(root='./data/{}/'.format(data_name), train=True, download=True, transform=transform_train)
+    trainloader = torch.utils.data.DataLoader(trainset, batch_size=batch_size, shuffle=True, num_workers=2)
+    testset = datasets.CIFAR10(root='./data/{}/'.format(data_name), train=False, download=True, transform=transform_test)
+    testloader = torch.utils.data.DataLoader(testset, batch_size=batch_size, shuffle=False, num_workers=2)
+    return trainloader,testloader
+    
 def fetch_data_linear(dataSize,input_features,out_features=1,high_dim=None,cov_mode='base',noise_sigma=np.sqrt(0.1),randomGen = np.random.RandomState(seed)):
     print('fetching data...')
     V = gen_cov_mat(input_features,cov_mode)
@@ -232,36 +235,17 @@ def denormalize(norm_input,norm_target=None,TAG=''):
         denorm_target = None
     return denorm_input,denorm_target
 
-def eval(mw,train_loader,test_loader,TAG,if_classification=False):
-    final_train_loss = 0                    
-    final_train_acc = 0
-    total_train_size = 0
-    for input,target in train_loader:
-        batch_size = input.size(0)
-        input,_ = normalize(input,TAG=TAG)
-        total_train_size += batch_size
-        loss,_ = mw.L(input,target,True)
-        final_train_loss += loss*batch_size
-        if(if_classification):
-            acc = mw.acc(input,target)
-            final_train_acc += acc*batch_size
-    final_train_loss = float(final_train_loss/total_train_size)
-    final_train_acc = float(final_train_acc/total_train_size)
-    print('train loss: {}, train acc: {} of size {}'.format(final_train_loss,final_train_acc,total_train_size))
-
-    final_test_loss = 0                    
-    final_test_acc = 0
-    total_test_size = 0
-    for input,target in test_loader:
-        batch_size = input.size(0)
-        input,_ = normalize(input,TAG=TAG)
-        total_test_size += batch_size  
-        loss,_ = mw.L(input,target,True)
-        final_test_loss += loss*batch_size
-        if(if_classification):
-            acc = mw.acc(input,target)
-            final_test_acc += acc*batch_size
-    final_test_loss = float(final_test_loss/total_test_size)
-    final_test_acc = float(final_test_acc/total_test_size)
-    print('test loss: {}, test acc: {} of size {}'.format(final_test_loss,final_test_acc,total_test_size))
-    return final_train_loss,final_train_acc,final_test_loss,final_test_acc
+def get_mean_and_std(dataset,data_name=''):
+    '''Compute the mean and std value of dataset.'''
+    dataloader = torch.utils.data.DataLoader(dataset, batch_size=1, shuffle=True, num_workers=2)
+    mean = torch.zeros(3)
+    std = torch.zeros(3)
+    print('==> Computing mean and std..')
+    for inputs, targets in dataloader:
+        for i in range(3):
+            mean[i] += inputs[:,i,:,:].mean()
+            std[i] += inputs[:,i,:,:].std()
+    mean.div_(len(dataset))
+    std.div_(len(dataset))
+    save([mean,std],'./data/stats/stats_{}.pkl'.format(data_name))
+    return mean, std

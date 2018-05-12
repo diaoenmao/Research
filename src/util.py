@@ -13,11 +13,12 @@ import seaborn as sns
 from torch.autograd import Variable
 from matplotlib import pyplot as plt
 
-def save(input,dir,protocol = 3):
+def save(input,dir,protocol = 2):
     dirname = os.path.dirname(dir)
     if not os.path.exists(dirname):
         os.makedirs(dirname, exist_ok=True)
-    pickle.dump(input, open(dir, "wb" ), protocol=protocol)
+    #pickle.dump(input, open(dir, "wb" ), protocol=protocol)
+    torch.save(input,dir,pickle_protocol=protocol)
     return
 
 def load(dir):
@@ -68,17 +69,19 @@ def get_correct_cnt(output,target):
     correct_cnt = (max_index == target).float().sum()
     return correct_cnt
     
-def get_acc(output,target):
-    max_index = output.max(dim = 1)[1]
-    correct_cnt = get_correct_cnt(output,target)
-    total_cnt = output.size()[0]
-    acc = correct_cnt/total_cnt
-    return acc
+def get_acc(output,target,topk):  
+    with torch.no_grad():
+        maxk = max(topk)
+        batch_size = target.size(0)
+        _, pred = output.topk(maxk, 1, True, True)
+        pred = pred.t()
+        correct = pred.eq(target.view(1, -1).expand_as(pred))
 
-def get_data_dist(data):
-    plt.figure()
-    plt.hist(data)
-    plt.show()
+        acc = []
+        for k in topk:
+            correct_k = correct[:k].view(-1).float().sum(0, keepdim=True)
+            acc.append(correct_k.mul_(100.0 / batch_size))            
+    return acc
 
 def gen_input_features(dims,init_size=None,step_size=None,start_point=None):
     if (init_size is None):
@@ -117,7 +120,35 @@ def gen_hidden_layers(max_num_nodes,init_size=None,step_size=None):
         hidden_layers.extend(list(itertools.product(*num_nodes)))
         del num_nodes[-1]   
     return hidden_layers
-    
+ 
+# ===================Object===================== 
+
+class Meter(object):
+    """Computes and stores the average and current value"""
+    def __init__(self):
+        self.reset()
+
+    def reset(self):
+        self.val = 0
+        self.avg = 0
+        self.sum = 0
+        self.count = 0
+        self.history = []
+
+    def update(self, val, n=1):
+        self.val = val
+        self.sum += val * n
+        self.count += n
+        self.avg = self.sum / self.count
+        self.history.append(val)
+
+    def merge(self, meter):
+        self.val = meter.val
+        self.sum = self.sum + meter.sum
+        self.count = self.count + meter.sum
+        self.avg = self.sum / self.count
+        self.history.extend(meter.history)
+        
 # ===================Function===================== 
 def p_inverse(A):
     pinv = (A.t().matmul(A)).inverse().matmul(A.t())
@@ -157,7 +188,12 @@ def softmax(x):
     assert x.shape == orig_shape
     return x
     
-# ===================Figure=====================   
+# ===================Figure===================== 
+def get_data_dist(data):
+    plt.figure()
+    plt.hist(data)
+    plt.show()
+    
 def showLoss(setnames,TAG=''):
     plt.figure()
     for i in range(len(setnames)):
