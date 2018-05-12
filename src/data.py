@@ -23,8 +23,8 @@ def fetch_data(data_name,batch_size):
         mean,std = get_mean_and_std(trainset,data_name)
     if(data_name=='CIFAR10'):
         transform_train = transforms.Compose([
-            # transforms.RandomCrop(32, padding=4),
-            # transforms.RandomHorizontalFlip(),
+            transforms.RandomCrop(32, padding=4),
+            transforms.RandomHorizontalFlip(),
             transforms.ToTensor(),
             transforms.Normalize(mean, std)
         ])

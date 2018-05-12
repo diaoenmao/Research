@@ -17,7 +17,6 @@ def save(input,dir,protocol = 2):
     dirname = os.path.dirname(dir)
     if not os.path.exists(dirname):
         os.makedirs(dirname, exist_ok=True)
-    #pickle.dump(input, open(dir, "wb" ), protocol=protocol)
     torch.save(input,dir,pickle_protocol=protocol)
     return
 
@@ -133,21 +132,20 @@ class Meter(object):
         self.avg = 0
         self.sum = 0
         self.count = 0
-        self.history = []
-
+        self.history_val = []
+        self.history_avg = [0]
+        
     def update(self, val, n=1):
         self.val = val
         self.sum += val * n
         self.count += n
         self.avg = self.sum / self.count
-        self.history.append(val)
-
+        self.history_val.append(self.val)
+        self.history_avg[0] = self.avg
+        
     def merge(self, meter):
-        self.val = meter.val
-        self.sum = self.sum + meter.sum
-        self.count = self.count + meter.sum
-        self.avg = self.sum / self.count
-        self.history.extend(meter.history)
+        self.history_val.extend(meter.history_val)
+        self.history_avg.extend(meter.history_avg)
         
 # ===================Function===================== 
 def p_inverse(A):
@@ -189,40 +187,21 @@ def softmax(x):
     return x
     
 # ===================Figure===================== 
-def get_data_dist(data):
+def plt_dist(x):
     plt.figure()
-    plt.hist(data)
+    plt.hist(x)
     plt.show()
-    
-def showLoss(setnames,TAG=''):
-    plt.figure()
-    for i in range(len(setnames)):
-        loss_path = './output/{}/loss_acc_{}.pkl'.format(setnames[i],TAG)
-        loss_iter,loss_epoch,regularized_loss_iter,regularized_loss_epoch,acc_iter,acc_epoch = load(loss_path)
-        num_loss_iter = len(loss_iter)
-        num_loss_epoch = len(loss_epoch)
-        if(setnames[i]=='train'):
-            plt.plot(np.arange(0,num_loss_iter),loss_iter,label='loss_'+setnames[i],linewidth=1)
-            plt.plot(np.arange(0,num_loss_iter),regularized_loss_iter,label='regularized_loss_'+setnames[i],linewidth=1)
-        elif(setnames[i]=='val'):
-            plt.plot(np.arange(0,num_loss_iter),loss_iter,label='loss_'+setnames[i],linewidth=2)
-            plt.plot(np.arange(0,num_loss_iter),regularized_loss_iter,label='regularized_loss_'+setnames[i],linewidth=2)
-    plt.grid()
-    plt.legend()
-    plt.xlabel('Epoch')
-    plt.ylabel('Loss')
-    plt.show()
-    return
-    
-def show(loss,setnames):
-    plt.figure()
-    for i in range(len(setnames)):
-        num_loss = len(loss[i])
-        plt.plot(np.arange(0,num_loss),loss[i],label=setnames[i],linewidth=1)
-    plt.grid()
-    plt.legend()
-    plt.xlabel('Iteration')
-    plt.ylabel('Loss')
-    plt.show()    
-    return
+
+def plt_meter(Meters,names,TAG):
+    colors = ['r','b']   
+    if not os.path.exists('./output/fig/'):
+        os.makedirs('./output/fig/', exist_ok=True)
+    for i in range(len(Meters)):
+        fig = plt.figure()
+        plt.plot(Meters[i][3].history_avg,label=names[i],color=colors[i])
+        plt.legend()
+        plt.grid()
+        fig.savefig('./output/fig/{}'.format(TAG), dpi=fig.dpi)
+
+
     
