@@ -5,10 +5,12 @@ import numpy as np
 import torch.utils.model_zoo as model_zoo
 from torch import nn
 
+__all__ = ['AlexNet', 'alexnet']
 
 
-__all__ = ['AlexNet']
-
+model_urls = {
+    'alexnet': 'https://download.pytorch.org/models/alexnet-owt-4df8aa71.pth',
+}
 
 class AlexNet(nn.Module):
 
@@ -30,13 +32,13 @@ class AlexNet(nn.Module):
             nn.MaxPool2d(kernel_size=2, stride=2),
         )
         self.classifier = nn.Sequential(
-            # nn.Dropout(),
-            # nn.Linear(256, 4096),
-            # nn.ReLU(inplace=True),
-            # nn.Dropout(),
-            # nn.Linear(4096, 4096),
-            # nn.ReLU(inplace=True),
-            nn.Linear(256, num_classes),
+            nn.Dropout(),
+            nn.Linear(256 * 6 * 6, 4096),
+            nn.ReLU(inplace=True),
+            nn.Dropout(),
+            nn.Linear(4096, 4096),
+            nn.ReLU(inplace=True),
+            nn.Linear(4096, num_classes),
         )
 
     def forward(self, x):
@@ -44,3 +46,14 @@ class AlexNet(nn.Module):
         x = x.view(x.size(0), -1)
         x = self.classifier(x)
         return x
+        
+def alexnet(pretrained=False, **kwargs):
+    r"""AlexNet model architecture from the
+    `"One weird trick..." <https://arxiv.org/abs/1404.5997>`_ paper.
+    Args:
+        pretrained (bool): If True, returns a model pre-trained on ImageNet
+    """
+    model = AlexNet(**kwargs)
+    if pretrained:
+        model.load_state_dict(model_zoo.load_url(model_urls['alexnet']))
+    return model

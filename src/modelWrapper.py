@@ -11,7 +11,7 @@ class modelWrapper:
     def __init__(self,model,optimizer_name):
         self.model = model
         self.optimizer_name = optimizer_name
-        self.optimizer_param = {'lr':1e-3,'momentum':0,'dampening':0,'weight_decay':0,'nesterov':False,
+        self.optimizer_param = {'lr':1e-1,'momentum':0,'dampening':0,'weight_decay':0,'nesterov':False,
         'betas':(0.9, 0.999),'eps':1e-8,'amsgrad':False,
         'max_iter':20,'max_eval':None,'tolerance_grad':1e-05,'tolerance_change':1e-09,'history_size':100,'line_search_fn':None}
         self.criterion = nn.NLLLoss(reduce=False)

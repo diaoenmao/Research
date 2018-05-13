@@ -16,12 +16,12 @@ seed = 1234
 def fetch_data(data_name,batch_size):
     print('fetching data...')
     stats_name = './data/stats/stats_{}.pkl'.format(data_name)
-    if(os.path.exists(stats_name)):
-        mean,std = load(stats_name)
-    else:
-        trainset = eval('datasets.{data_name}(root=\'./data/{data_name}\', train=True, download=True,transform=transforms.ToTensor())'.format(data_name=data_name))
-        mean,std = get_mean_and_std(trainset,data_name)
-    if(data_name=='CIFAR10'):
+    if(data_name=='CIFAR10' or data_name=='CIFAR100'):
+        if(os.path.exists(stats_name)):
+            mean,std = load(stats_name)
+        else:
+            train_dataset = eval('datasets.{data_name}(root=\'./data/{data_name}\', train=True, download=True,transform=transforms.ToTensor())'.format(data_name=data_name))
+            mean,std = get_mean_and_std(train_dataset,data_name)
         transform_train = transforms.Compose([
             transforms.RandomCrop(32, padding=4),
             transforms.RandomHorizontalFlip(),
@@ -31,12 +31,33 @@ def fetch_data(data_name,batch_size):
         transform_test = transforms.Compose([
             transforms.ToTensor(),
             transforms.Normalize(mean, std)
-        ])     
-    trainset = datasets.CIFAR10(root='./data/{}/'.format(data_name), train=True, download=True, transform=transform_train)
-    trainloader = torch.utils.data.DataLoader(trainset, batch_size=batch_size, shuffle=True, num_workers=2)
-    testset = datasets.CIFAR10(root='./data/{}/'.format(data_name), train=False, download=True, transform=transform_test)
-    testloader = torch.utils.data.DataLoader(testset, batch_size=batch_size, shuffle=False, num_workers=2)
-    return trainloader,testloader
+        ])
+        train_dataset = datasets.CIFAR10(root='./data/{}/train/'.format(data_name), train=True, download=True, transform=transform_train)
+        train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=2, pin_memory=True)
+        test_dataset = datasets.CIFAR10(root='./data/{}/test/'.format(data_name), train=False, download=True, transform=transform_test)
+        test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers=2, pin_memory=True)
+    elif(data_name=='Imagenet-12'):
+        train_dataset = datasets.ImageFolder(
+            './data/{}/train/'.format(data_name),
+            transforms.Compose([
+                transforms.RandomResizedCrop(224),
+                transforms.RandomHorizontalFlip(),
+                transforms.ToTensor(),
+                transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                                     std=[0.229, 0.224, 0.225])
+            ]))
+        train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=2, pin_memory=True)      
+        test_dataset = datasets.ImageFolder(
+            './data/{}/test/'.format(data_name),
+            transforms.Compose([
+                transforms.Resize(256),
+                transforms.CenterCrop(224),
+                transforms.ToTensor(),
+                transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                                     std=[0.229, 0.224, 0.225])
+            ]))
+        test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers=2, pin_memory=True)
+    return train_loader,test_loader
     
 def fetch_data_linear(dataSize,input_features,out_features=1,high_dim=None,cov_mode='base',noise_sigma=np.sqrt(0.1),randomGen = np.random.RandomState(seed)):
     print('fetching data...')

@@ -8,11 +8,12 @@ from torch.autograd import Variable
 from torch.optim.lr_scheduler import MultiStepLR
 from data import *
 from util import *
-from model import *
+import models as models
 from modelWrapper import *
 
 data_name = 'CIFAR10'
-model_name = 'AlexNet'
+model_dir = 'cifar'
+model_name = 'vgg11'
 TAG = data_name+'_'+model_name
 config.init()
 batch_size = config.PARAM['batch_size']
@@ -27,7 +28,7 @@ output_feature = 10
 def main():
     cudnn.benchmark = True
     if(if_resume):
-        checkpoint = torch.load('./model/checkpoint.pth')
+        checkpoint = torch.load('./output/model/checkpoint.pth')
         init_seed = checkpoint['seed']
     else:
         init_seed = 0
@@ -45,15 +46,15 @@ def runExperiment(seed,Experiment_TAG):
     train_loader,test_loader = fetch_data(data_name=data_name,batch_size=batch_size)
     
     criterion = nn.CrossEntropyLoss().to(device)
-    model = eval('{}(num_classes={}).to(device)'.format(model_name,output_feature))
+    model = eval('models.{}.{}(num_classes={}).to(device)'.format(model_dir,model_name,output_feature))
     mw = modelWrapper(model,config.PARAM['optimizer_name'])
     mw.set_optimizer_param(config.PARAM['optimizer_param'])
     mw.set_criterion(criterion)
     mw.wrap()
 
     if(if_resume):
-        checkpoint = torch.load('./model/checkpoint.pth')
-        init_epoch = checkpoint['epoch'] + 1
+        checkpoint = torch.load('./output/model/checkpoint.pth')
+        init_epoch = checkpoint['epoch']
         best_prec1 = checkpoint['best_prec1']
         best_epoch = checkpoint['best_epoch']
         mw.model.load_state_dict(checkpoint['state_dict'])
@@ -65,7 +66,7 @@ def runExperiment(seed,Experiment_TAG):
         best_prec1 = 0
         best_epoch = 1 
         
-    scheduler = MultiStepLR(mw.optimizer, milestones=[100,150], gamma=0.1)
+    scheduler = MultiStepLR(mw.optimizer, milestones=[50,100,150], gamma=0.1)
     train_result = None
     test_result = None
 
@@ -75,7 +76,7 @@ def runExperiment(seed,Experiment_TAG):
         new_test_result = test(test_loader, mw)
         prec1 = new_test_result[3].avg
         is_best = prec1 > best_prec1
-        best_epoch = epoch+1 if(is_best) else best_epoch
+        best_epoch = epoch if(is_best) else best_epoch
         best_prec1 = max(prec1, best_prec1)
         print('Epoch: {0}\t'
               'Loss {losses.avg:.4f}\t'
@@ -90,7 +91,7 @@ def runExperiment(seed,Experiment_TAG):
             for i in range(len(train_result)):
                 train_result[i].merge(new_train_result[i])
                 test_result[i].merge(new_test_result[i])
-        save([train_result,test_result],'./output/result/{}_{}'.format(Experiment_TAG,epoch+1))
+        save([train_result,test_result],'./output/result/{}_{}'.format(Experiment_TAG,epoch))
         save_checkpoint({
             'seed': seed,
             'epoch': epoch,
@@ -169,14 +170,14 @@ def test(val_loader, mw):
     return batch_time,data_time,losses,top1,top5
 
 
-def save_checkpoint(state, is_best, filename='./model/checkpoint.pth'):
+def save_checkpoint(state, is_best, filename='./output/model/checkpoint.pth'):
     save(state, filename)
     if is_best:
-        shutil.copyfile(filename, './model/best_{}.pth'.format(state['seed']))          
+        shutil.copyfile(filename, './output/model/best_{}.pth'.format(state['seed']))          
     return
     
 def plt_result(seed):
-    best = load('./model/best_{}.pth'.format(seed))
+    best = load('./output/model/best_{}.pth'.format(seed))
     best_prec1 = best['best_prec1']
     best_epoch = best['best_epoch']
     train_result,test_result = load('./output/result/{}_{}_{}'.format(TAG,seed,best_epoch))
