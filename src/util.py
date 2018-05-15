@@ -193,7 +193,8 @@ def plt_dist(x):
     plt.show()
 
 def plt_meter(Meters,names,TAG):
-    colors = ['r','b']   
+    colors = ['r','b']
+    print('Figure name: {}'.format(TAG))
     if not os.path.exists('./output/fig/'):
         os.makedirs('./output/fig/', exist_ok=True)
     for i in range(len(Meters)):
@@ -201,7 +202,7 @@ def plt_meter(Meters,names,TAG):
         plt.plot(Meters[i][3].history_avg,label=names[i],color=colors[i])
         plt.legend()
         plt.grid()
-        fig.savefig('./output/fig/{}'.format(TAG), dpi=fig.dpi)
+        fig.savefig('./output/fig/{}/{}'.format(names[i],TAG), dpi=fig.dpi)
 
 
     

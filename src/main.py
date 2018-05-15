@@ -11,9 +11,9 @@ from util import *
 import models as models
 from modelWrapper import *
 
-data_name = 'CIFAR10'
-model_dir = 'cifar'
-model_name = 'vgg11'
+data_name = 'EMNIST_byclass'
+model_dir = 'emnist'
+model_name = 'alexnet'
 TAG = data_name+'_'+model_name
 config.init()
 batch_size = config.PARAM['batch_size']
@@ -23,7 +23,7 @@ verbose = config.PARAM['verbose']
 if_resume = config.PARAM['if_resume']
 if_show = config.PARAM['if_show']
 num_Experiments = 1
-output_feature = 10
+output_feature = 62
 
 def main():
     cudnn.benchmark = True
@@ -34,7 +34,7 @@ def main():
         init_seed = 0
     seeds = list(range(init_seed,init_seed+num_Experiments))
     for i in range(len(seeds)):
-        runExperiment(seeds[i],'{}_{}'.format(TAG,i))
+        runExperiment(seeds[i],'{}_{}'.format(TAG,seeds[i]))
         if(if_show):
             plt_result(seeds[i])
     return
@@ -66,7 +66,7 @@ def runExperiment(seed,Experiment_TAG):
         best_prec1 = 0
         best_epoch = 1 
         
-    scheduler = MultiStepLR(mw.optimizer, milestones=[50,100,150], gamma=0.1)
+    scheduler = MultiStepLR(mw.optimizer, milestones=[150,225], gamma=0.1)
     train_result = None
     test_result = None
 
