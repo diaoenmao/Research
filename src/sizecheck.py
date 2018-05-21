@@ -2,9 +2,9 @@ import torch
 import numpy as np
 
 output_sizes = [(128,1,32,32)]
-output_features = 62
+output_features = 10
 def main():
-    x = alexnet(output_sizes[0])
+    x = conv(output_sizes[0])
     print(output_sizes)
     return
     
@@ -23,6 +23,19 @@ def alexnet(x):
     x = linear(x,output_channels=output_features)
     return x
 
+def conv(x):
+    x = conv2d(x,out_channels=96,kernel_size=3,stride=1,padding=1)
+    x = maxpool2d(x,kernel_size=2,stride=2)
+    x = conv2d(x,out_channels=128,kernel_size=3,stride=1,padding=1)
+    x = maxpool2d(x,kernel_size=2,stride=2)
+    x = conv2d(x,out_channels=256,kernel_size=3,stride=1,padding=1)
+    x = maxpool2d(x,kernel_size=2,stride=2)
+    x = flatten(x)
+    x = linear(x,output_channels=2048)
+    x = linear(x,output_channels=2048)
+    x = linear(x,output_channels=output_features)
+    return x  
+    
 def conv2d(input_size, out_channels, kernel_size, stride=1, padding=0, dilation=1, groups=1, bias=True):
     H_in,W_in = input_size[2],input_size[3]
     H_out = np.floor((H_in+2*padding-dilation*(kernel_size-1)-1)/stride+1)
