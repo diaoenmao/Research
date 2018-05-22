@@ -4,12 +4,12 @@ from functional import *
         
 class Organic(nn.Module):
 
-    def __init__(self, in_channels, p=torch.tensor(0.5), inplace=False):
+    def __init__(self, in_channels, p=torch.tensor([0.5]), inplace=False):
         super(Organic, self).__init__()
         self.in_channels = in_channels
-        self.z = torch.bernoulli(torch.ones(in_channels)*p)
+        self.z = torch.bernoulli(torch.ones(1,in_channels)*p)
         self.p = p
-        self.info = Organic_info(p,z)
+        self.info = Organic_info(self.p,self.z)
         self.inplace = inplace
         
     def update(self,z,p):
@@ -49,18 +49,23 @@ class Organic_info:
     def get_samples(self):
         return self.samples
         
-def update_organic(data_loader,mw):
+def update_organic(mw,mode,input=None,target=None,data_loader=None):
     with no_grad():
         for m in mw.model.modules():
             if isinstance(m, Organic):
-                mc_organic(data_loader,mw,m)
+                if(mode=='fast'):
+                    fast_organic(data_loader,mw,m)
+                elif(mode=='mc'):
+                    mc_organic(input,target,mw,m)
+                elif(mode=='genetic'):
+                    genetic_organic(data_loader,mw,m)
     return
                 
 
-def fast_mc_organic(input,target,mw,m):
+def fast_organic(input,target,mw,m):
     in_channels = m.in_channels
     nsteps = 1
-    p_update_window_size = 100
+    p_update_window_size = 10
     output = mw.model(input)
     loss_tracker = mw.loss(output,target)
     for i in range(nsteps):
@@ -106,7 +111,7 @@ def mc_organic(data_loader,mw,m,device):
                     new_p_1 = new_p*flipped_loss
                     new_p_0 = (1-new_p)*loss
                     new_p = new_p_1/(new_p_1+new_p_0)
-                if(z[j]==1)
+                if(z[j]==1):
                     new_p_1 = new_p*loss
                     new_p_0 = (1-new_p)*flipped_loss
                     new_p = new_p_1/(new_p_1+new_p_0)
@@ -115,7 +120,7 @@ def mc_organic(data_loader,mw,m,device):
                     new_p_1 = new_p[j]*flipped_loss
                     new_p_0 = (1-new_p[j])*loss
                     new_p[j] = new_p_1/(new_p_1+new_p_0)
-                if(z[j]==1)
+                if(z[j]==1):
                     new_p_1 = new_p[j]*loss
                     new_p_0 = (1-new_p[j])*flipped_loss
                     new_p[j] = new_p_1/(new_p_1+new_p_0)

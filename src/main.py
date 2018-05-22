@@ -10,10 +10,11 @@ from data import *
 from util import *
 import models as models
 from modelWrapper import *
+from Organic import *
 
 data_name = 'CIFAR10'
 model_dir = 'cifar'
-model_name = 'conv'
+model_name = 'organic_conv11'
 TAG = data_name+'_'+model_name
 config.init()
 batch_size = config.PARAM['batch_size']

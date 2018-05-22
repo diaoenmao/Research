@@ -30,7 +30,7 @@ class VGG(nn.Module):
             nn.Linear(512, 4096),
             nn.ReLU(True),
             nn.Dropout(),
-            nn.Linear(256, 4096),
+            nn.Linear(4096, 4096),
             nn.ReLU(True),
             nn.Dropout(),
             nn.Linear(4096, num_classes)
