@@ -4,18 +4,20 @@ from functional import *
         
 class Organic(nn.Module):
 
-    def __init__(self, in_channels, p=torch.tensor([0.5]), inplace=False):
+    def __init__(self, in_channels, p=torch.tensor(0.5), inplace=False):
         super(Organic, self).__init__()
         self.in_channels = in_channels
-        self.z = torch.bernoulli(torch.ones(1,in_channels)*p)
+        if(p.dim()>0):
+            p = torch.ones(in_channels)*p
         self.p = p
+        self.z = torch.bernoulli(torch.ones(1,in_channels)*self.p)
         self.info = Organic_info(self.p,self.z)
         self.inplace = inplace
         
-    def update(self,z,p):
-        self.z = z
+    def update(self,p,z):
         self.p = p
-        assert self.in_channels == self.z.size(0)
+        self.z = z
+        assert self.in_channels == self.z.size(1)
         assert (p>=0).all() and (p<=1).all()
         
     def forward(self, input):
@@ -34,7 +36,7 @@ class Organic_info:
         self.p.append(new_p)
         self.z.append(new_z)
         if(samples is not None):
-            torch.cat((self.samples,samples),0)
+            self.samples = torch.cat((self.samples,samples),0)
 
     def record(self,samples=None):
         self.historic_samples.append(self.samples)
@@ -50,11 +52,11 @@ class Organic_info:
         return self.samples
         
 def update_organic(mw,mode,input=None,target=None,data_loader=None):
-    with no_grad():
+    with torch.no_grad():
         for m in mw.model.modules():
             if isinstance(m, Organic):
                 if(mode=='fast'):
-                    fast_organic(data_loader,mw,m)
+                    fast_organic(input,target,mw,m)
                 elif(mode=='mc'):
                     mc_organic(input,target,mw,m)
                 elif(mode=='genetic'):
@@ -77,18 +79,21 @@ def fast_organic(input,target,mw,m):
                 new_p = torch.mean(samples[-p_update_window_size:,:],dim=0)
         else:
             new_p = p 
-        new_z = torch.bernoulli(torch.ones(in_channels)*new_p)
-        m.update(new_z,new_p)
+        new_z = torch.bernoulli(torch.ones(1,in_channels)*new_p)
+        m.update(new_p,new_z)
         output = mw.model(input)
         new_loss = mw.loss(output,target)
         log_ratio = -new_loss+loss_tracker
-        log_u = torch.log(torch.rand(1))
+        log_u = torch.log(torch.rand(1)).to(log_ratio.device)
+        #print(samples.size())
+        #print(new_p)
         if(log_ratio>log_u):
             m.update(new_p,new_z)
             m.info.update(new_p,new_z,new_z)
             loss_tracker = new_loss
         else:
-            m.info.update(p,z,z)   
+            m.update(new_p,new_z)
+            m.info.update(new_p,new_z,new_z)   
     return
     
 def mc_organic(data_loader,mw,m,device):
@@ -97,13 +102,13 @@ def mc_organic(data_loader,mw,m,device):
     new_p = p
     for i, (input, target) in enumerate(data_loader):
         input, target = input.to(device), target.to(device)
-        m.update(z,p)
+        m.update(p,z)
         output = mw.model(input)
         base_loss = mw.loss(output,target)
         for j in range(in_channels):
             flipped_z = z
             flipped_z[j] = 1 - flipped_z[j]
-            m.update(flipped_z,p)
+            m.update(p,flipped_z)
             output = mw.model(input)
             flipped_loss = mw.loss(output,target)            
             if(p.dim()==0):
@@ -125,7 +130,7 @@ def mc_organic(data_loader,mw,m,device):
                     new_p_0 = (1-new_p[j])*flipped_loss
                     new_p[j] = new_p_1/(new_p_1+new_p_0)
             
-    new_z = torch.bernoulli(torch.ones(in_channels)*new_p)
+    new_z = torch.bernoulli(torch.ones(1,in_channels)*new_p)
     m.update(new_p,new_z)
     m.info.update(new_p,new_z)
     m.info.record(new_z)
@@ -162,7 +167,7 @@ def fitness(input,target,samples):
     num_samples = samples.size(0)
     fitness = torch.zeros(num_samples)
     for i in range(num_samples):
-        m.update(samples[i,:],p)
+        m.update(p,samples[i,:])
         output = mw.model(input)
         fitness[i] = mw.loss(output,target)
     sorted_fitness, indices = torch.sort(fitness,descending = True)

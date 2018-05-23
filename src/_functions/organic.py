@@ -18,10 +18,13 @@ class Organic(InplaceFunction):
         ctx.p = p.to(input.device)
         ctx.train = train
         ctx.inplace = inplace
-        
-        if (ctx.p.size(0)==1 and ctx.p.item() == 0) or not ctx.train:
-            return input
-
+        if (ctx.p.dim() == 0):
+            if(ctx.p.item() == 1 or not ctx.train):
+                return input
+        else:
+            if((ctx.p == 1).all() or not ctx.train):
+                return input            
+            
         if ctx.inplace:
             ctx.mark_dirty(input)
             output = input
