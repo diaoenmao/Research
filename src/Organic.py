@@ -10,8 +10,7 @@ class Organic(nn.Module):
         if(p.dim()>0):
             p = torch.ones(in_channels)*p
         self.p = p
-        self.z = torch.bernoulli(torch.ones(1,in_channels)*self.p)
-        self.info = Organic_info(self.p,self.z)
+        self.z = None
         self.inplace = inplace
         
     def update(self,p,z):
@@ -50,7 +49,13 @@ class Organic_info:
     
     def get_samples(self):
         return self.samples
-        
+
+def init_organic(input,m):
+    if(m.z is None):
+        m.z = torch.bernoulli(torch.ones(input.size(0),m.in_channels)*m.p)
+        m.info = Organic_info(m.p,m.z)
+    return
+    
 def update_organic(mw,mode,input=None,target=None,data_loader=None):
     with torch.no_grad():
         for m in mw.model.modules():
@@ -61,13 +66,23 @@ def update_organic(mw,mode,input=None,target=None,data_loader=None):
                     mc_organic(input,target,mw,m)
                 elif(mode=='genetic'):
                     genetic_organic(data_loader,mw,m)
+                elif(mode=='dropout'):
+                    dropout(input,m)
     return
                 
-
-def fast_organic(input,target,mw,m):
+def dropout(input,m):
     in_channels = m.in_channels
+    init_organic(input,m)
+    p,z,samples = m.info.get_p(),m.info.get_z(),m.info.get_samples()
+    new_z = torch.bernoulli(torch.ones(input.size(0),in_channels)*p)
+    m.update(p,new_z)
+    m.info.update(p,new_z,new_z)
+    return
+        
+def fast_organic(input,target,mw,m):
     nsteps = 1
     p_update_window_size = 10
+    init_organic(input,m)
     output = mw.model(input)
     loss_tracker = mw.loss(output,target)
     for i in range(nsteps):
@@ -79,7 +94,7 @@ def fast_organic(input,target,mw,m):
                 new_p = torch.mean(samples[-p_update_window_size:,:],dim=0)
         else:
             new_p = p 
-        new_z = torch.bernoulli(torch.ones(1,in_channels)*new_p)
+        new_z = torch.bernoulli(torch.ones(input.size(0),m.in_channels)*new_p)
         m.update(new_p,new_z)
         output = mw.model(input)
         new_loss = mw.loss(output,target)
@@ -98,14 +113,13 @@ def fast_organic(input,target,mw,m):
     
 def mc_organic(data_loader,mw,m,device):
     p,z,samples = m.info.get_p(),m.info.get_z(),m.info.get_samples()
-    in_channels = m.in_channels
     new_p = p
     for i, (input, target) in enumerate(data_loader):
         input, target = input.to(device), target.to(device)
         m.update(p,z)
         output = mw.model(input)
         base_loss = mw.loss(output,target)
-        for j in range(in_channels):
+        for j in range(m.in_channels):
             flipped_z = z
             flipped_z[j] = 1 - flipped_z[j]
             m.update(p,flipped_z)
@@ -130,7 +144,7 @@ def mc_organic(data_loader,mw,m,device):
                     new_p_0 = (1-new_p[j])*flipped_loss
                     new_p[j] = new_p_1/(new_p_1+new_p_0)
             
-    new_z = torch.bernoulli(torch.ones(1,in_channels)*new_p)
+    new_z = torch.bernoulli(torch.ones(1,m.in_channels)*new_p)
     m.update(new_p,new_z)
     m.info.update(new_p,new_z)
     m.info.record(new_z)

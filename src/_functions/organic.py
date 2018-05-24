@@ -7,24 +7,22 @@ class Organic(InplaceFunction):
 
     @staticmethod
     def _make_noise(input,z): 
-        assert input.size(1)==z.size(1)
-        z = z.expand(input.size(0),input.size(1)).to(input.device)
-        z = torch.reshape(z,(input.size(0), input.size(1), *repeat(1, input.dim() - 2)))
+        assert input.size(0)==z.size(0) and input.size(1)==z.size(1)
+        z = torch.reshape(z,(input.size(0), input.size(1), *repeat(1, input.dim() - 2))).to(input.device)
         return z
                                    
     @classmethod
     def forward(cls, ctx, input, z, p, train=False, inplace=False):
-        ctx.noise = cls._make_noise(input,z)
         ctx.p = p.to(input.device)
         ctx.train = train
-        ctx.inplace = inplace
         if (ctx.p.dim() == 0):
             if(ctx.p.item() == 1 or not ctx.train):
                 return input
         else:
             if((ctx.p == 1).all() or not ctx.train):
-                return input            
-            
+                return input 
+        ctx.noise = cls._make_noise(input,z)         
+        ctx.inplace = inplace              
         if ctx.inplace:
             ctx.mark_dirty(input)
             output = input
