@@ -16,6 +16,7 @@ class Organic(nn.Module):
     def update(self,p,z):
         self.p = p
         self.z = z
+        self.info.update(p,z.to(torch.uint8))
         assert self.in_channels == self.z.size(1)
         assert (p>=0).all() and (p<=1).all()
         
@@ -25,35 +26,36 @@ class Organic(nn.Module):
         
         
 class Organic_info:        
-    def __init__(self,p,z):
+    def __init__(self,p,in_channels):
         self.p = [p]
-        self.z = [z]
-        self.samples = z
-        self.historic_samples = []
+        self.window_size = 50000
+        self.samples = torch.zeros(self.window_size,in_channels,dtype=torch.uint8)
+        self.sample_tracker = 0
+        self.if_full = False
         
-    def update(self,new_p,new_z,samples=None): 
+    def update(self,new_p,new_z): 
         self.p.append(new_p)
-        self.z.append(new_z)
-        if(samples is not None):
-            self.samples = torch.cat((self.samples,samples),0)
-
-    def record(self,samples=None):
-        self.historic_samples.append(self.samples)
-        self.samples = samples
-        
-    def get_p(self):
-        return self.p[-1]
-        
-    def get_z(self):
-        return self.z[-1]
-    
-    def get_samples(self):
-        return self.samples
+        num_samples = new_z.size(0)
+        if(self.if_full):
+            self.samples[:-num_samples,:] = self.samples[num_samples:]
+            self.samples[-num_samples:,:] = new_z        
+        else:
+            if(self.sample_tracker+num_samples<=self.window_size):
+                new_tracker = self.sample_tracker+num_samples
+            else:
+                self.samples[:-num_samples,:] = self.samples[num_samples:]
+                self.sample_tracker = self.window_size - num_samples
+                new_tracker = self.window_size
+            self.samples[self.sample_tracker:new_tracker,:] = new_z    
+            self.sample_tracker = new_tracker
+            if(self.sample_tracker==self.window_size):
+                self.if_full = True
 
 def init_organic(input,m):
     if(m.z is None):
         m.z = torch.bernoulli(torch.ones(input.size(0),m.in_channels)*m.p)
-        m.info = Organic_info(m.p,m.z)
+        m.info = Organic_info(m.p,m.in_channels)
+        m.info.update(m.p,m.z)
     return
     
 def update_organic(mw,mode,input=None,target=None,data_loader=None):
@@ -73,10 +75,9 @@ def update_organic(mw,mode,input=None,target=None,data_loader=None):
 def dropout(input,m):
     in_channels = m.in_channels
     init_organic(input,m)
-    p,z,samples = m.info.get_p(),m.info.get_z(),m.info.get_samples()
+    p = m.p
     new_z = torch.bernoulli(torch.ones(input.size(0),in_channels)*p)
     m.update(p,new_z)
-    m.info.update(p,new_z,new_z)
     return
         
 def fast_organic(input,target,mw,m):
@@ -94,7 +95,7 @@ def fast_organic(input,target,mw,m):
                 new_p = torch.mean(samples[-p_update_window_size:,:],dim=0)
         else:
             new_p = p 
-        new_z = torch.bernoulli(torch.ones(input.size(0),m.in_channels)*new_p)
+        new_z = torch.bernoulli(torch.ones(input.size(0),m.in_channels)*new_p).to(torch.uint8)
         m.update(new_p,new_z)
         output = mw.model(input)
         new_loss = mw.loss(output,target)
@@ -144,7 +145,7 @@ def mc_organic(data_loader,mw,m,device):
                     new_p_0 = (1-new_p[j])*flipped_loss
                     new_p[j] = new_p_1/(new_p_1+new_p_0)
             
-    new_z = torch.bernoulli(torch.ones(1,m.in_channels)*new_p)
+    new_z = torch.bernoulli(torch.ones(1,m.in_channels)*new_p).to(torch.uint8)
     m.update(new_p,new_z)
     m.info.update(new_p,new_z)
     m.info.record(new_z)
@@ -155,7 +156,7 @@ def genetic_organic(data_loader,mw,m,device):
     min_population_size = 1000
     p,z,samples = m.info.get_p(),m.info.get_z(),m.info.get_samples()
     if(samples.size(0)<min_population_size):
-        samples = torch.cat((samples,torch.bernoulli(torch.ones(min_population_size-samples.size(0),min_channels)*p)),0)
+        samples = torch.cat((samples,torch.bernoulli(torch.ones(min_population_size-samples.size(0),min_channels)*p)),0).to(torch.uint8)
     for i, (input, target) in enumerate(data_loader):
         input, target = input.to(device), target.to(device)
         p,z,samples = m.info.get_p(),m.info.get_z(),m.info.get_samples()           
