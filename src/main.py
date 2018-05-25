@@ -134,7 +134,7 @@ def train(epoch,train_loader, mw):
                   'Prec@5 {top5.val:.3f} ({top5.avg:.3f})'.format(
                    epoch, i+1, len(train_loader), batch_time=batch_time,
                    data_time=data_time, loss=losses, top1=top1, top5=top5))
-                  
+    #update_organic(mw,'reset')               
     return batch_time,data_time,losses,top1,top5
   
     

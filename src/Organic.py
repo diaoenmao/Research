@@ -1,6 +1,6 @@
 from torch import nn
 from functional import *
-
+import time
         
 class Organic(nn.Module):
 
@@ -11,12 +11,15 @@ class Organic(nn.Module):
             p = torch.ones(in_channels)*p
         self.p = p
         self.z = None
+        self.info = None
         self.inplace = inplace
         
     def update(self,p,z):
         self.p = p
         self.z = z
-        self.info.update(p,z.to(torch.uint8))
+        if(self.info is None):
+            self.info = Organic_info(self.p,self.in_channels)
+        self.info.update(self.p,self.z.to(torch.uint8))
         assert self.in_channels == self.z.size(1)
         assert (p>=0).all() and (p<=1).all()
         
@@ -36,28 +39,19 @@ class Organic_info:
     def update(self,new_p,new_z): 
         self.p.append(new_p)
         num_samples = new_z.size(0)
-        if(self.if_full):
-            self.samples[:-num_samples,:] = self.samples[num_samples:]
-            self.samples[-num_samples:,:] = new_z        
-        else:
-            if(self.sample_tracker+num_samples<=self.window_size):
-                new_tracker = self.sample_tracker+num_samples
-            else:
-                self.samples[:-num_samples,:] = self.samples[num_samples:]
-                self.sample_tracker = self.window_size - num_samples
-                new_tracker = self.window_size
+        if(self.sample_tracker+num_samples<=self.window_size):
+            new_tracker = self.sample_tracker+num_samples
             self.samples[self.sample_tracker:new_tracker,:] = new_z    
             self.sample_tracker = new_tracker
-            if(self.sample_tracker==self.window_size):
-                self.if_full = True
+        else:
+            num_extra_samples = self.sample_tracker+num_samples-self.window_size
+            self.samples[self.sample_tracker:,:] = new_z[:-num_extra_samples,:]
+            self.samples[:num_extra_samples,:] = new_z[-num_extra_samples:,:]
+            new_tracker = num_extra_samples
 
-def init_organic(input,m):
-    if(m.z is None):
-        m.z = torch.bernoulli(torch.ones(input.size(0),m.in_channels)*m.p)
-        m.info = Organic_info(m.p,m.in_channels)
-        m.info.update(m.p,m.z)
-    return
-    
+        if(self.sample_tracker==self.window_size):
+            self.sample_tracker = 0 
+            
 def update_organic(mw,mode,input=None,target=None,data_loader=None):
     with torch.no_grad():
         for m in mw.model.modules():
@@ -74,7 +68,6 @@ def update_organic(mw,mode,input=None,target=None,data_loader=None):
                 
 def dropout(input,m):
     in_channels = m.in_channels
-    init_organic(input,m)
     p = m.p
     new_z = torch.bernoulli(torch.ones(input.size(0),in_channels)*p)
     m.update(p,new_z)
