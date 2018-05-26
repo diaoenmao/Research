@@ -11,15 +11,13 @@ class Organic(nn.Module):
             p = torch.ones(in_channels)*p
         self.p = p
         self.z = None
-        self.info = None
+        self.info = Organic_info(self.p,self.in_channels)
         self.inplace = inplace
         
     def update(self,p,z):
         self.p = p
         self.z = z
-        if(self.info is None):
-            self.info = Organic_info(self.p,self.in_channels)
-        self.info.update(self.p,self.z.to(torch.uint8))
+        self.info.update(self.p,self.z)
         assert self.in_channels == self.z.size(1)
         assert (p>=0).all() and (p<=1).all()
         
@@ -32,7 +30,7 @@ class Organic_info:
     def __init__(self,p,in_channels):
         self.p = [p]
         self.window_size = 50000
-        self.samples = torch.zeros(self.window_size,in_channels,dtype=torch.uint8)
+        self.samples = torch.zeros(self.window_size,in_channels)
         self.sample_tracker = 0
         self.if_full = False
         
@@ -50,7 +48,8 @@ class Organic_info:
             new_tracker = num_extra_samples
 
         if(self.sample_tracker==self.window_size):
-            self.sample_tracker = 0 
+            self.sample_tracker = 0
+            self.if_full = True
             
 def update_organic(mw,mode,input=None,target=None,data_loader=None):
     with torch.no_grad():
@@ -75,34 +74,51 @@ def dropout(input,m):
         
 def fast_organic(input,target,mw,m):
     nsteps = 1
-    p_update_window_size = 10
-    init_organic(input,m)
-    output = mw.model(input)
-    loss_tracker = mw.loss(output,target)
+    p_update_window_size = input.size(0)
+    loss_tracker = torch.tensor(10,dtype=torch.float32,device='cuda:0')
     for i in range(nsteps):
-        p,z,samples = m.info.get_p(),m.info.get_z(),m.info.get_samples()
-        if(samples is not None and samples.size(0)>=p_update_window_size):
-            if(p.dim()==0):
-                new_p = torch.mean(samples[-p_update_window_size:,:])
-            else:          
-                new_p = torch.mean(samples[-p_update_window_size:,:],dim=0)
+        if(m.info.if_full):
+            #print(i)
+            sample_tracker = m.info.sample_tracker
+            #print(sample_tracker)
+            if(sample_tracker<p_update_window_size):
+                if(sample_tracker==0):
+                    tmp_samples = m.info.samples[-p_update_window_size:,:]
+                else:
+                    tmp_samples = torch.cat((m.info.samples[:sample_tracker,:],m.info.samples[sample_tracker-p_update_window_size:,:]),dim=0)
+                if(m.p.dim()==0):
+                    new_p = torch.mean(tmp_samples)
+                else:          
+                    new_p = torch.mean(tmp_samples,dim=0)                
+            else:           
+                if(m.p.dim()==0):
+                    new_p = torch.mean(m.info.samples[sample_tracker-p_update_window_size:sample_tracker,:])
+                else:          
+                    new_p = torch.mean(m.info.samples[sample_tracker-p_update_window_size:sample_tracker:,:],dim=0)
+            new_z = torch.bernoulli(torch.ones(input.size(0),m.in_channels)*new_p)
+            m.update(new_p,new_z)
         else:
-            new_p = p 
-        new_z = torch.bernoulli(torch.ones(input.size(0),m.in_channels)*new_p).to(torch.uint8)
-        m.update(new_p,new_z)
+            new_p = m.p
+            new_z = torch.bernoulli(torch.ones(input.size(0),m.in_channels)*new_p)
+            m.update(new_p,new_z) 
+            return        
         output = mw.model(input)
         new_loss = mw.loss(output,target)
         log_ratio = -new_loss+loss_tracker
         log_u = torch.log(torch.rand(1)).to(log_ratio.device)
-        #print(samples.size())
-        #print(new_p)
+        # print(loss_tracker.item())
+        # print(new_loss.item())
+        # print(log_ratio.item())
+        # print(log_u.item())
         if(log_ratio>log_u):
-            m.update(new_p,new_z)
-            m.info.update(new_p,new_z,new_z)
+            # print('accept')
+            # print(new_p)
+            # m.update(new_p,new_z)
             loss_tracker = new_loss
         else:
-            m.update(new_p,new_z)
-            m.info.update(new_p,new_z,new_z)   
+            print('reject')
+            print(m.p)
+            m.update(m.p,m.z)           
     return
     
 def mc_organic(data_loader,mw,m,device):

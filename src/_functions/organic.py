@@ -7,6 +7,9 @@ class Organic(InplaceFunction):
 
     @staticmethod
     def _make_noise(input,z): 
+        if(not (input.size(0)==z.size(0) and input.size(1)==z.size(1))):
+            print(input.size())
+            print(z.size())
         assert input.size(0)==z.size(0) and input.size(1)==z.size(1)
         z = torch.reshape(z,(input.size(0), input.size(1), *repeat(1, input.dim() - 2))).to(input.device)
         return z
