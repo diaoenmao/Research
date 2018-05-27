@@ -10,7 +10,7 @@ class Organic(nn.Module):
         if(p.dim()>0):
             p = torch.ones(in_channels)*p
         self.p = p
-        self.z = None
+        self.z = torch.bernoulli(torch.ones(100,self.in_channels)*self.p)
         self.info = Organic_info(self.p,self.in_channels)
         self.inplace = inplace
         
@@ -64,7 +64,15 @@ def update_organic(mw,mode,input=None,target=None,data_loader=None):
                 elif(mode=='dropout'):
                     dropout(input,m)
     return
-                
+
+def report_organic(mw):
+    p = []
+    with torch.no_grad():
+        for m in mw.model.modules():
+            if isinstance(m, Organic):
+                p.append(m.info.p)
+    return p
+    
 def dropout(input,m):
     in_channels = m.in_channels
     p = m.p
@@ -74,28 +82,32 @@ def dropout(input,m):
         
 def fast_organic(input,target,mw,m):
     nsteps = 1
-    p_update_window_size = input.size(0)
-    loss_tracker = torch.tensor(10,dtype=torch.float32,device='cuda:0')
+    p_update_window_size = 100
+    #s1 = time.time()
     for i in range(nsteps):
         if(m.info.if_full):
-            #print(i)
-            sample_tracker = m.info.sample_tracker
-            #print(sample_tracker)
+            if(i==0):
+                output = mw.model(input)
+                loss_tracker = mw.loss(output,target)
+            sample_tracker = m.info.sample_tracker            
             if(sample_tracker<p_update_window_size):
                 if(sample_tracker==0):
                     tmp_samples = m.info.samples[-p_update_window_size:,:]
-                else:
-                    tmp_samples = torch.cat((m.info.samples[:sample_tracker,:],m.info.samples[sample_tracker-p_update_window_size:,:]),dim=0)
+                else:                    
+                    tmp_samples = torch.cat((m.info.samples[:sample_tracker,:],m.info.samples[sample_tracker-p_update_window_size:,:]),dim=0)                    
                 if(m.p.dim()==0):
                     new_p = torch.mean(tmp_samples)
-                else:          
-                    new_p = torch.mean(tmp_samples,dim=0)                
+                else:     
+                    new_p = torch.mean(tmp_samples,dim=0)
             else:           
                 if(m.p.dim()==0):
                     new_p = torch.mean(m.info.samples[sample_tracker-p_update_window_size:sample_tracker,:])
                 else:          
                     new_p = torch.mean(m.info.samples[sample_tracker-p_update_window_size:sample_tracker:,:],dim=0)
+            # print(new_p)
+            # print((new_p==0).sum())
             new_z = torch.bernoulli(torch.ones(input.size(0),m.in_channels)*new_p)
+            #print(new_z[:20,:])            
             m.update(new_p,new_z)
         else:
             new_p = m.p
@@ -105,7 +117,7 @@ def fast_organic(input,target,mw,m):
         output = mw.model(input)
         new_loss = mw.loss(output,target)
         log_ratio = -new_loss+loss_tracker
-        log_u = torch.log(torch.rand(1)).to(log_ratio.device)
+        log_u = torch.log(torch.rand(1,device=log_ratio.device))
         # print(loss_tracker.item())
         # print(new_loss.item())
         # print(log_ratio.item())
@@ -113,12 +125,14 @@ def fast_organic(input,target,mw,m):
         if(log_ratio>log_u):
             # print('accept')
             # print(new_p)
-            # m.update(new_p,new_z)
+            m.update(new_p,new_z)
             loss_tracker = new_loss
         else:
-            print('reject')
-            print(m.p)
-            m.update(m.p,m.z)           
+            # print('reject')
+            # print(m.p)
+            m.update(m.p,m.z)
+        #e1 = time.time()
+        #print(e1-s1)
     return
     
 def mc_organic(data_loader,mw,m,device):
