@@ -1,23 +1,63 @@
 from torch import nn
 from functional import *
 import time
-        
+from torch.distributions.bernoulli import Bernoulli   
+from torch.distributions.beta import Beta
+     
 class Organic(nn.Module):
 
-    def __init__(self, in_channels, p=torch.tensor(0.5), inplace=False):
+    def __init__(self, in_channels, p=torch.tensor([0.5]), inplace=False):
         super(Organic, self).__init__()
         self.in_channels = in_channels
-        if(p.dim()>0):
-            p = torch.ones(in_channels)*p
-        self.p = p
-        self.z = torch.bernoulli(torch.ones(100,self.in_channels)*self.p)
-        self.info = Organic_info(self.p,self.in_channels)
+        if(p.dim()==0):            
+            self.prior = torch.ones(2)*50
+            self.concentration = torch.zeros(2)       
+            self.p = p
+            self.if_collapse = True
+        else:
+            self.prior = torch.ones(2,self.in_channels)*50
+            self.concentration = torch.zeros(2,self.in_channels)
+            self.p = torch.ones(in_channels)*p
+            self.if_collapse = False
+        self.z = Bernoulli(torch.ones(100,self.in_channels)*self.p).sample()
+        self.info = Organic_info(self.prior,self.concentration,self.p)
         self.inplace = inplace
-        
-    def update(self,p,z):
-        self.p = p
-        self.z = z
-        self.info.update(self.p,self.z)
+    
+    def Beta(self):
+        pos_concentration = self.prior+self.concentration
+        if(self.if_collapse):            
+            return Beta(pos_concentration[0],pos_concentration[1])
+        else:
+            return Beta(pos_concentration[0,:],pos_concentration[1,:])
+    
+    def step(self,new_z):
+        if(self.if_collapse):
+            counts_1 = torch.mean(new_z,dim=1)
+            counts_0 = 1-counts_1
+            self.concentration[0] = torch.sum(counts_1)
+            self.concentration[1] = torch.sum(counts_0)
+        else:
+            counts_1 = torch.sum(new_z,dim=0)
+            counts_0 = new_z.size(0)-counts_1
+            self.concentration[0,:] = counts_1
+            self.concentration[1,:] = counts_0
+    
+    def pred(self):
+        self.prior += self.concentration
+        if(self.if_collapse):
+            self.concentration = torch.zeros(2)
+        else:
+            self.concentration = torch.zeros(2,self.in_channels)
+            
+    def update(self,prior=None,concentration=None,p=None,z=None):
+        if(prior is not None):
+            self.prior = prior
+        if(concentration is not None):
+            self.concentration = concentration
+        if(p is not None):
+            self.p = p
+        if(z is not None):
+            self.z = z
         assert self.in_channels == self.z.size(1)
         assert (p>=0).all() and (p<=1).all()
         
@@ -27,114 +67,87 @@ class Organic(nn.Module):
         
         
 class Organic_info:        
-    def __init__(self,p,in_channels):
+    def __init__(self,prior,concentration,p):
+        self.prior = [prior]
+        self.concentration = [concentration]
         self.p = [p]
-        self.window_size = 50000
-        self.samples = torch.zeros(self.window_size,in_channels)
-        self.sample_tracker = 0
-        self.if_full = False
         
-    def update(self,new_p,new_z): 
-        self.p.append(new_p)
-        num_samples = new_z.size(0)
-        if(self.sample_tracker+num_samples<=self.window_size):
-            new_tracker = self.sample_tracker+num_samples
-            self.samples[self.sample_tracker:new_tracker,:] = new_z    
-            self.sample_tracker = new_tracker
-        else:
-            num_extra_samples = self.sample_tracker+num_samples-self.window_size
-            self.samples[self.sample_tracker:,:] = new_z[:-num_extra_samples,:]
-            self.samples[:num_extra_samples,:] = new_z[-num_extra_samples:,:]
-            new_tracker = num_extra_samples
-
-        if(self.sample_tracker==self.window_size):
-            self.sample_tracker = 0
-            self.if_full = True
+    def update(self,prior=None,concentration=None,p=None):
+        if(prior is not None):
+            self.prior.append(prior)
+        if(concentration is not None):
+            self.concentration.append(concentration)
+        if(p is not None):
+            self.p.append(p)
             
 def update_organic(mw,mode,input=None,target=None,data_loader=None):
     with torch.no_grad():
         for m in mw.model.modules():
             if isinstance(m, Organic):
                 if(mode=='fast'):
-                    fast_organic(input,target,mw,m)
+                    fast_organic(input,target,mw,m)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 
                 elif(mode=='mc'):
                     mc_organic(input,target,mw,m)
                 elif(mode=='genetic'):
                     genetic_organic(data_loader,mw,m)
+                elif(mode=='forget'):
+                    forget_organic(m)
                 elif(mode=='dropout'):
                     dropout(input,m)
     return
 
 def report_organic(mw):
-    p = []
+    info = []
     with torch.no_grad():
         for m in mw.model.modules():
             if isinstance(m, Organic):
-                p.append(m.info.p)
-    return p
+                info.append(m.info)
+    return info
     
 def dropout(input,m):
     in_channels = m.in_channels
     p = m.p
-    new_z = torch.bernoulli(torch.ones(input.size(0),in_channels)*p)
-    m.update(p,new_z)
+    new_z = Bernoulli(torch.ones(input.size(0),in_channels)*p).sample()
+    m.update(p=p,z=new_z)
     return
         
 def fast_organic(input,target,mw,m):
     nsteps = 1
-    p_update_window_size = 100
-    #s1 = time.time()
     for i in range(nsteps):
-        if(m.info.if_full):
-            if(i==0):
-                output = mw.model(input)
-                loss_tracker = mw.loss(output,target)
-            sample_tracker = m.info.sample_tracker            
-            if(sample_tracker<p_update_window_size):
-                if(sample_tracker==0):
-                    tmp_samples = m.info.samples[-p_update_window_size:,:]
-                else:                    
-                    tmp_samples = torch.cat((m.info.samples[:sample_tracker,:],m.info.samples[sample_tracker-p_update_window_size:,:]),dim=0)                    
-                if(m.p.dim()==0):
-                    new_p = torch.mean(tmp_samples)
-                else:     
-                    new_p = torch.mean(tmp_samples,dim=0)
-            else:           
-                if(m.p.dim()==0):
-                    new_p = torch.mean(m.info.samples[sample_tracker-p_update_window_size:sample_tracker,:])
-                else:          
-                    new_p = torch.mean(m.info.samples[sample_tracker-p_update_window_size:sample_tracker:,:],dim=0)
-            # print(new_p)
-            # print((new_p==0).sum())
-            new_z = torch.bernoulli(torch.ones(input.size(0),m.in_channels)*new_p)
-            #print(new_z[:20,:])            
-            m.update(new_p,new_z)
-        else:
-            new_p = m.p
-            new_z = torch.bernoulli(torch.ones(input.size(0),m.in_channels)*new_p)
-            m.update(new_p,new_z) 
-            return        
+        if(i==0):
+            output = mw.model(input)
+            current_likelihood = torch.exp(-mw.loss(output,target))
+        new_beta = m.Beta()
+        cur_z,cur_p = m.z,m.p
+        new_p = new_beta.sample()
+        new_z = Bernoulli(torch.ones(input.size(0),m.in_channels)*new_p).sample()        
+        m.update(p=new_p,z=new_z)        
         output = mw.model(input)
-        new_loss = mw.loss(output,target)
-        log_ratio = -new_loss+loss_tracker
-        log_u = torch.log(torch.rand(1,device=log_ratio.device))
-        # print(loss_tracker.item())
-        # print(new_loss.item())
-        # print(log_ratio.item())
-        # print(log_u.item())
-        if(log_ratio>log_u):
-            # print('accept')
-            # print(new_p)
-            m.update(new_p,new_z)
-            loss_tracker = new_loss
+        new_likelihood = torch.exp(-mw.loss(output,target))
+        accept_probability = torch.min(torch.tensor([1,(new_likelihood/current_likelihood).item()]))
+        u = torch.rand(1)
+        # print(i)
+        # print(cur_p.item())
+        # print(new_p.item())
+        # print(current_likelihood.item())
+        # print(new_likelihood.item())
+        # print(accept_probability.item())
+        # print(u.item())
+        if(accept_probability>=u):
+            m.step(new_z)
+            m.update(p=new_p,z=new_z)
+            m.info.update(prior=m.prior,concentration=m.concentration,p=new_p)
+            current_likelihood = new_likelihood
         else:
-            # print('reject')
-            # print(m.p)
-            m.update(m.p,m.z)
-        #e1 = time.time()
-        #print(e1-s1)
+            m.update(p=cur_p,z=cur_z)
+            m.info.update(prior=m.prior,concentration=m.concentration,p=cur_p)
+    m.pred()
     return
-    
+
+def forget_organic(m):
+    m.prior /= 25000
+    m.prior *= 100
+    return
 def mc_organic(data_loader,mw,m,device):
     p,z,samples = m.info.get_p(),m.info.get_z(),m.info.get_samples()
     new_p = p

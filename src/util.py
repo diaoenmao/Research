@@ -10,7 +10,6 @@ import shutil
 import zipfile
 import numpy as np
 import seaborn as sns
-from torch.autograd import Variable
 from matplotlib import pyplot as plt
 
 def save(input,dir,protocol = 2):

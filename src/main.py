@@ -85,14 +85,14 @@ def runExperiment(seed,Experiment_TAG):
               'Prec@5 {prec5.avg:.3f}\t'
               'Time {time}\t'
               .format(epoch,losses=new_test_result[2],prec1=new_test_result[3],prec5=new_test_result[4],time=new_train_result[0].avg*len(train_loader)))
-        if(organic_result[0][0].dim()>0):
+        if(organic_result[0].p[0].dim()>0):
             print('Organic probability:')
             for i in range(len(organic_result)):
-                print(organic_result[i][-1][:10])
+                print(organic_result[i].p[-1][:10])
         else:
             print('Organic probability:')
             for i in range(len(organic_result)):
-                print(organic_result[i][-1].item())
+                print(organic_result[i].p[-1].item())
         if(train_result is None):
             train_result = list(new_train_result)
             test_result = list(new_test_result)            
@@ -141,7 +141,8 @@ def train(epoch,train_loader, mw):
                   'Prec@1 {top1.val:.3f} ({top1.avg:.3f})\t'
                   'Prec@5 {top5.val:.3f} ({top5.avg:.3f})'.format(
                    epoch, i+1, len(train_loader), batch_time=batch_time,
-                   data_time=data_time, loss=losses, top1=top1, top5=top5))         
+                   data_time=data_time, loss=losses, top1=top1, top5=top5)) 
+    update_organic(mw,'forget')
     return batch_time,data_time,losses,top1,top5
   
     
