@@ -3,10 +3,11 @@ from functional import *
 import time
 from torch.distributions.bernoulli import Bernoulli   
 from torch.distributions.beta import Beta
+from matplotlib import pyplot as plt
      
 class Organic(nn.Module):
 
-    def __init__(self, in_channels, p=torch.tensor([0.5]), inplace=False):
+    def __init__(self, in_channels, p=torch.tensor(0.5), inplace=False):
         super(Organic, self).__init__()
         self.in_channels = in_channels
         if(p.dim()==0):            
@@ -29,19 +30,25 @@ class Organic(nn.Module):
             return Beta(pos_concentration[0],pos_concentration[1])
         else:
             return Beta(pos_concentration[0,:],pos_concentration[1,:])
-    
-    def step(self,new_z):
+
+    def count(self,z):
         if(self.if_collapse):
-            counts_1 = torch.mean(new_z,dim=1)
-            counts_0 = 1-counts_1
-            self.concentration[0] = torch.sum(counts_1)
-            self.concentration[1] = torch.sum(counts_0)
+            counts_1 = torch.sum(torch.mean(z,dim=1))
+            counts_0 = torch.sum(1-torch.mean(z,dim=1))
         else:
-            counts_1 = torch.sum(new_z,dim=0)
-            counts_0 = new_z.size(0)-counts_1
+            counts_1 = torch.sum(z,dim=0)
+            counts_0 = z.size(0)-counts_1
+        return counts_1,counts_0
+        
+    def step(self,new_z):
+        counts_1,counts_0 = self.count(new_z)
+        if(self.if_collapse):
+            self.concentration[0] = counts_1
+            self.concentration[1] = counts_0
+        else:
             self.concentration[0,:] = counts_1
             self.concentration[1,:] = counts_0
-    
+
     def pred(self):
         self.prior += self.concentration
         if(self.if_collapse):
@@ -49,7 +56,7 @@ class Organic(nn.Module):
         else:
             self.concentration = torch.zeros(2,self.in_channels)
             
-    def update(self,prior=None,concentration=None,p=None,z=None):
+    def update(self,prior=None,concentration=None,p=None,z=None):    
         if(prior is not None):
             self.prior = prior
         if(concentration is not None):
@@ -114,21 +121,44 @@ def dropout(input,m):
 def fast_organic(input,target,mw,m):
     nsteps = 1
     for i in range(nsteps):
+        #print(i)
         if(i==0):
             output = mw.model(input)
             current_likelihood = torch.exp(-mw.loss(output,target))
         new_beta = m.Beta()
         cur_z,cur_p = m.z,m.p
         new_p = new_beta.sample()
-        new_z = Bernoulli(torch.ones(input.size(0),m.in_channels)*new_p).sample()        
+        new_z = Bernoulli(torch.ones(input.size(0),m.in_channels)*new_p).sample() 
+        cur_counts_1,cur_counts_0 = m.count(cur_z)
+        new_counts_1,new_counts_0 = m.count(new_z)
+        cur_beta_jump = Beta(new_beta.concentration1+cur_counts_1,new_beta.concentration0+cur_counts_0)
+        new_beta_jump = Beta(new_beta.concentration1+new_counts_1,new_beta.concentration0+new_counts_0)
+        correction_numerator = torch.exp(new_beta_jump.log_prob(cur_p))
+        correction_denominator = torch.exp(cur_beta_jump.log_prob(new_p))
+        c = correction_numerator/correction_denominator
+        # print(cur_counts_1)
+        # print(cur_counts_0)
+        # print(new_counts_1)
+        # print(new_counts_0)
+        # print(new_beta.concentration1+new_counts_1)
+        # print(new_beta.concentration0+new_counts_0)
+        # print(cur_p)
+        # print(correction_numerator)
+        # print(new_beta.concentration1+cur_counts_1)
+        # print(new_beta.concentration0+cur_counts_0)
+        # print(new_p)
+        # print(correction_denominator)
+        # print(c)
+
+        
         m.update(p=new_p,z=new_z)        
         output = mw.model(input)
         new_likelihood = torch.exp(-mw.loss(output,target))
-        accept_probability = torch.min(torch.tensor([1,(new_likelihood/current_likelihood).item()]))
+        accept_probability = torch.min(torch.tensor([1,(new_likelihood/current_likelihood).item() * c.item()]))
         u = torch.rand(1)
-        # print(i)
+
         # print(cur_p.item())
-        # print(new_p.item())
+        # pt(new_p.item())
         # print(current_likelihood.item())
         # print(new_likelihood.item())
         # print(accept_probability.item())
@@ -139,15 +169,17 @@ def fast_organic(input,target,mw,m):
             m.info.update(prior=m.prior,concentration=m.concentration,p=new_p)
             current_likelihood = new_likelihood
         else:
+            m.step(cur_z)
             m.update(p=cur_p,z=cur_z)
             m.info.update(prior=m.prior,concentration=m.concentration,p=cur_p)
     m.pred()
     return
 
 def forget_organic(m):
-    m.prior /= 25000
-    m.prior *= 100
+    forgeting_factor = 0.9
+    m.prior *= forgeting_factor
     return
+    
 def mc_organic(data_loader,mw,m,device):
     p,z,samples = m.info.get_p(),m.info.get_z(),m.info.get_samples()
     new_p = p

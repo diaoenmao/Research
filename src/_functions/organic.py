@@ -33,9 +33,9 @@ class Organic(InplaceFunction):
             if(ctx.p == 0):
                 ctx.noise.fill_(0)
             ctx.noise.div_(ctx.p)
-        else:                   
+        else:
             ctx.noise[:,ctx.p==0,] = 0
-            ctx.noise[:,ctx.p!=0,].div_(ctx.p[ctx.p!=0])
+            ctx.noise[:,ctx.p!=0,] = ctx.noise[:,ctx.p!=0,].div_(ctx.p[ctx.p!=0])
         ctx.noise = ctx.noise.expand_as(input)
         output.mul_(ctx.noise)
         return output
