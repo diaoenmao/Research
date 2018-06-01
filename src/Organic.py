@@ -7,7 +7,7 @@ from matplotlib import pyplot as plt
      
 class Organic(nn.Module):
 
-    def __init__(self, in_channels, p=torch.tensor(0.5), inplace=False):
+    def __init__(self, in_channels, p=torch.tensor([0.5]), inplace=False):
         super(Organic, self).__init__()
         self.in_channels = in_channels
         if(p.dim()==0):            
@@ -149,7 +149,7 @@ def fast_organic(input,target,mw,m):
         # print(new_p)
         # print(correction_denominator)
         # print(c)
-
+        # exit()
         
         m.update(p=new_p,z=new_z)        
         output = mw.model(input)
@@ -176,8 +176,8 @@ def fast_organic(input,target,mw,m):
     return
 
 def forget_organic(m):
-    forgeting_factor = 0.9
-    m.prior *= forgeting_factor
+    m.prior /= 25000
+    m.prior *= 50
     return
     
 def mc_organic(data_loader,mw,m,device):
