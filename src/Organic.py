@@ -174,11 +174,7 @@ def mh_organic(input,target,mw,m):
         new_to_cur = torch.mean(proposal_new_ber.log_prob(cur_z))
         cur_to_new = torch.mean(proposal_cur_ber.log_prob(new_z))
         accept_probability = torch.min(torch.exp(torch.mean(new_pos) - torch.mean(cur_pos) + new_to_cur - cur_to_new),torch.tensor(1.0,device=m.device))
-        # print(cur_likelihood)
-        # print(torch.mean(new_pos))
-        # print(torch.mean(cur_pos))
-        # print(torch.mean(opposite_new_pos))
-        # print(torch.mean(new_pos))
+
         u = torch.rand(1,device=input.device)
 
         if(accept_probability>=u):
@@ -198,43 +194,32 @@ def forget_organic(m):
     m.prior += 50
     return
     
-def mc_organic(data_loader,mw,m,device):
-    p,z,samples = m.info.get_p(),m.info.get_z(),m.info.get_samples()
-    new_p = p
-    for i, (input, target) in enumerate(data_loader):
-        input, target = input.to(device), target.to(device)
-        m.update(p,z)
-        output = mw.model(input)
-        base_loss = mw.loss(output,target)
-        for j in range(m.in_channels):
-            flipped_z = z
-            flipped_z[j] = 1 - flipped_z[j]
-            m.update(p,flipped_z)
-            output = mw.model(input)
-            flipped_loss = mw.loss(output,target)            
-            if(p.dim()==0):
-                if(z[j]==0):
-                    new_p_1 = new_p*flipped_loss
-                    new_p_0 = (1-new_p)*loss
-                    new_p = new_p_1/(new_p_1+new_p_0)
-                if(z[j]==1):
-                    new_p_1 = new_p*loss
-                    new_p_0 = (1-new_p)*flipped_loss
-                    new_p = new_p_1/(new_p_1+new_p_0)
-            else:
-                if(z[j]==0):
-                    new_p_1 = new_p[j]*flipped_loss
-                    new_p_0 = (1-new_p[j])*loss
-                    new_p[j] = new_p_1/(new_p_1+new_p_0)
-                if(z[j]==1):
-                    new_p_1 = new_p[j]*loss
-                    new_p_0 = (1-new_p[j])*flipped_loss
-                    new_p[j] = new_p_1/(new_p_1+new_p_0)
-            
-    new_z = torch.bernoulli(torch.ones(1,m.in_channels)*new_p).to(torch.uint8)
-    m.update(new_p,new_z)
-    m.info.update(new_p,new_z)
-    m.info.record(new_z)
+def gibbs_organic(input,target,mw,m):
+    cur_p = m.p
+    cur_ber = Bernoulli(torch.ones(m.in_channels,device=m.device)*cur_p)
+    
+    cur_z = m.z
+    m.update(p=cur_p,z=cur_z)
+    output = mw.model(input)
+    cur_likelihood = -mw.loss(output,target)
+    if(m.if_collapse):
+        cur_prior_likelihood = torch.mean(cur_ber.log_prob(cur_z))
+    else:
+        cur_prior_likelihood = torch.mean(cur_ber.log_prob(cur_z),dim=0)
+    cur_pos = cur_prior_likelihood+cur_likelihood      
+    opposite_cur_z = 1 - cur_z
+    m.update(p=cur_p,z=opposite_cur_z)
+    opposite_output = mw.model(input)
+    opposite_likelihood = -mw.loss(opposite_output,target) 
+    if(m.if_collapse):
+        opposite_cur_prior_likelihood = torch.mean(cur_ber.log_prob(opposite_cur_z))
+    else:
+        opposite_cur_prior_likelihood = torch.mean(cur_ber.log_prob(opposite_cur_z),dim=0)
+    opposite_pos = opposite_cur_prior_likelihood+opposite_likelihood
+    new_p = 1/(1+torch.exp(opposite_pos-cur_pos)) 
+    new_z = Bernoulli(torch.ones(m.in_channels,device=m.device)*new_p).sample((input.size(0),)) 
+    m.update(p=new_p,z=new_z)
+    m.info.update(p=new_p)
     return  
     
     

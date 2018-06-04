@@ -121,7 +121,7 @@ def train(epoch,train_loader, mw):
     for i, (input, target) in enumerate(train_loader):
         input, target = input.to(device), target.to(device)
         data_time.update(time.time() - end)
-        update_organic(mw,'mh',input=input,target=target)
+        update_organic(mw,'gibbs',input=input,target=target)
         output = mw.model(input)
         loss = mw.loss(output,target)
         losses.update(loss.item(), input.size(0))
@@ -142,7 +142,7 @@ def train(epoch,train_loader, mw):
                   'Prec@5 {top5.val:.3f} ({top5.avg:.3f})'.format(
                    epoch, i+1, len(train_loader), batch_time=batch_time,
                    data_time=data_time, loss=losses, top1=top1, top5=top5)) 
-    update_organic(mw,'forget')
+    #update_organic(mw,'forget')
     return batch_time,data_time,losses,top1,top5
   
     
