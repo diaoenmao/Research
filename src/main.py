@@ -121,7 +121,7 @@ def train(epoch,train_loader, mw):
     for i, (input, target) in enumerate(train_loader):
         input, target = input.to(device), target.to(device)
         data_time.update(time.time() - end)
-        update_organic(mw,'fast',input=input,target=target)
+        update_organic(mw,'mh',input=input,target=target)
         output = mw.model(input)
         loss = mw.loss(output,target)
         losses.update(loss.item(), input.size(0))
@@ -190,7 +190,7 @@ def plt_result(seed):
     best = load('./output/model/best_{}.pth'.format(seed))
     best_prec1 = best['best_prec1']
     best_epoch = best['best_epoch']
-    train_result,test_result = load('./output/result/{}_{}_{}'.format(TAG,seed,best_epoch))
+    train_result,test_result,_ = load('./output/result/{}_{}_{}'.format(TAG,seed,best_epoch))
     plt_meter([train_result,test_result],['train','test'],'{}_{}_{}'.format(TAG,seed,best_epoch))
     return
     

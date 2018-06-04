@@ -7,20 +7,21 @@ from matplotlib import pyplot as plt
      
 class Organic(nn.Module):
 
-    def __init__(self, in_channels, p=torch.tensor([0.5]), inplace=False):
+    def __init__(self, in_channels, p=torch.tensor([0.5]), device='cuda:0', inplace=False):
         super(Organic, self).__init__()
         self.in_channels = in_channels
+        self.device = device
         if(p.dim()==0):            
             self.prior = torch.ones(2)*50
             self.concentration = torch.zeros(2)       
-            self.p = p
+            self.p = p.to(self.device)
             self.if_collapse = True
         else:
             self.prior = torch.ones(2,self.in_channels)*50
             self.concentration = torch.zeros(2,self.in_channels)
-            self.p = torch.ones(in_channels)*p
+            self.p = torch.ones(in_channels,device=self.device)*p.to(self.device)
             self.if_collapse = False
-        self.z = Bernoulli(torch.ones(100,self.in_channels)*self.p).sample()
+        self.z = Bernoulli(torch.ones(self.in_channels,device=self.device)*self.p).sample((100,))
         self.info = Organic_info(self.prior,self.concentration,self.p)
         self.inplace = inplace
     
@@ -40,8 +41,8 @@ class Organic(nn.Module):
             counts_0 = z.size(0)-counts_1
         return counts_1,counts_0
         
-    def step(self,new_z):
-        counts_1,counts_0 = self.count(new_z)
+    def step(self,z):
+        counts_1,counts_0 = self.count(z)
         if(self.if_collapse):
             self.concentration[0] = counts_1
             self.concentration[1] = counts_0
@@ -77,7 +78,7 @@ class Organic_info:
     def __init__(self,prior,concentration,p):
         self.prior = [prior]
         self.concentration = [concentration]
-        self.p = [p]
+        self.p = [p.to('cpu')]
         
     def update(self,prior=None,concentration=None,p=None):
         if(prior is not None):
@@ -85,16 +86,16 @@ class Organic_info:
         if(concentration is not None):
             self.concentration.append(concentration)
         if(p is not None):
-            self.p.append(p)
+            self.p.append(p.to('cpu'))
             
 def update_organic(mw,mode,input=None,target=None,data_loader=None):
     with torch.no_grad():
         for m in mw.model.modules():
             if isinstance(m, Organic):
-                if(mode=='fast'):
-                    fast_organic(input,target,mw,m)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 
-                elif(mode=='mc'):
-                    mc_organic(input,target,mw,m)
+                if(mode=='mh'):
+                    mh_organic(input,target,mw,m)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 
+                elif(mode=='gibbs'):
+                    gibbs_organic(input,target,mw,m)
                 elif(mode=='genetic'):
                     genetic_organic(data_loader,mw,m)
                 elif(mode=='forget'):
@@ -114,60 +115,76 @@ def report_organic(mw):
 def dropout(input,m):
     in_channels = m.in_channels
     p = m.p
-    new_z = Bernoulli(torch.ones(input.size(0),in_channels)*p).sample()
+    new_z = Bernoulli(torch.ones(in_channels)*p).sample((input.size(0),))
     m.update(p=p,z=new_z)
     return
         
-def fast_organic(input,target,mw,m):
+def mh_organic(input,target,mw,m):
     nsteps = 1
     for i in range(nsteps):
         #print(i)
-        if(i==0):
-            output = mw.model(input)
-            current_likelihood = torch.exp(-mw.loss(output,target))
-        new_beta = m.Beta()
-        cur_z,cur_p = m.z,m.p
-        new_p = new_beta.sample()
-        new_z = Bernoulli(torch.ones(input.size(0),m.in_channels)*new_p).sample() 
-        cur_counts_1,cur_counts_0 = m.count(cur_z)
-        new_counts_1,new_counts_0 = m.count(new_z)
-        cur_beta_jump = Beta(new_beta.concentration1+cur_counts_1,new_beta.concentration0+cur_counts_0)
-        new_beta_jump = Beta(new_beta.concentration1+new_counts_1,new_beta.concentration0+new_counts_0)
-        correction_numerator = torch.exp(new_beta_jump.log_prob(cur_p))
-        correction_denominator = torch.exp(cur_beta_jump.log_prob(new_p))
-        c = correction_numerator/correction_denominator
-        # print(cur_counts_1)
-        # print(cur_counts_0)
-        # print(new_counts_1)
-        # print(new_counts_0)
-        # print(new_beta.concentration1+new_counts_1)
-        # print(new_beta.concentration0+new_counts_0)
-        # print(cur_p)
-        # print(correction_numerator)
-        # print(new_beta.concentration1+cur_counts_1)
-        # print(new_beta.concentration0+cur_counts_0)
-        # print(new_p)
-        # print(correction_denominator)
-        # print(c)
-        # exit()
-        
-        m.update(p=new_p,z=new_z)        
+        cur_beta = m.Beta()
+        cur_p = cur_beta.sample().to(m.device)
+        cur_ber = Bernoulli(torch.ones(m.in_channels,device=m.device)*cur_p) 
+ 
+        cur_z = cur_ber.sample((input.size(0),))
+        m.update(p=cur_p,z=cur_z)
         output = mw.model(input)
-        new_likelihood = torch.exp(-mw.loss(output,target))
-        accept_probability = torch.min(torch.tensor([1,(new_likelihood/current_likelihood).item() * c.item()]))
-        u = torch.rand(1)
+        cur_likelihood = -mw.loss(output,target)
+        if(m.if_collapse):
+            cur_prior_likelihood = torch.mean(cur_ber.log_prob(cur_z))
+        else:
+            cur_prior_likelihood = torch.mean(cur_ber.log_prob(cur_z),dim=0)
+        cur_pos = cur_likelihood+cur_prior_likelihood
 
-        # print(cur_p.item())
-        # pt(new_p.item())
-        # print(current_likelihood.item())
-        # print(new_likelihood.item())
-        # print(accept_probability.item())
-        # print(u.item())
+        
+        opposite_cur_z = 1-cur_z        
+        m.update(p=cur_p,z=opposite_cur_z)
+        opposite_cur_output = mw.model(input)
+        opposite_cur_likelihood = -mw.loss(opposite_cur_output,target)
+        if(m.if_collapse):
+            opposite_cur_prior_likelihood = torch.mean(cur_ber.log_prob(opposite_cur_z))
+        else:
+            opposite_cur_prior_likelihood = torch.mean(cur_ber.log_prob(opposite_cur_z),dim=0)
+        opposite_cur_pos = opposite_cur_likelihood+opposite_cur_prior_likelihood      
+        proposal_cur_p = 1/(1+torch.exp(opposite_cur_pos-cur_pos))
+        proposal_cur_ber = Bernoulli(torch.ones(m.in_channels,device=m.device)*proposal_cur_p) 
+        
+        new_z = proposal_cur_ber.sample((input.size(0),))
+        m.update(p=cur_p,z=new_z)
+        output = mw.model(input)
+        new_likelihood = -mw.loss(output,target)
+        if(m.if_collapse):
+            new_prior_likelihood = torch.mean(cur_ber.log_prob(new_z))
+        else:
+            new_prior_likelihood = torch.mean(cur_ber.log_prob(new_z),dim=0)
+        new_pos = new_likelihood+new_prior_likelihood
+        opposite_new_z = 1-new_z
+        m.update(p=cur_p,z=opposite_new_z)
+        opposite_new_output = mw.model(input)
+        opposite_new_likelihood = -mw.loss(opposite_new_output,target)
+        if(m.if_collapse):
+            opposite_new_prior_likelihood = torch.mean(cur_ber.log_prob(opposite_new_z))
+        else:
+            opposite_new_prior_likelihood = torch.mean(cur_ber.log_prob(opposite_new_z),dim=0)
+        opposite_new_pos = opposite_new_likelihood+opposite_new_prior_likelihood  
+        proposal_new_p = 1/(1+torch.exp(opposite_new_pos-new_pos))
+        proposal_new_ber = Bernoulli(torch.ones(m.in_channels,device=m.device)*proposal_new_p)
+       
+        new_to_cur = torch.mean(proposal_new_ber.log_prob(cur_z))
+        cur_to_new = torch.mean(proposal_cur_ber.log_prob(new_z))
+        accept_probability = torch.min(torch.exp(torch.mean(new_pos) - torch.mean(cur_pos) + new_to_cur - cur_to_new),torch.tensor(1.0,device=m.device))
+        # print(cur_likelihood)
+        # print(torch.mean(new_pos))
+        # print(torch.mean(cur_pos))
+        # print(torch.mean(opposite_new_pos))
+        # print(torch.mean(new_pos))
+        u = torch.rand(1,device=input.device)
+
         if(accept_probability>=u):
             m.step(new_z)
-            m.update(p=new_p,z=new_z)
-            m.info.update(prior=m.prior,concentration=m.concentration,p=new_p)
-            current_likelihood = new_likelihood
+            m.update(p=cur_p,z=new_z)
+            m.info.update(prior=m.prior,concentration=m.concentration,p=cur_p)
         else:
             m.step(cur_z)
             m.update(p=cur_p,z=cur_z)
@@ -178,6 +195,7 @@ def fast_organic(input,target,mw,m):
 def forget_organic(m):
     m.prior /= 25000
     m.prior *= 50
+    m.prior += 50
     return
     
 def mc_organic(data_loader,mw,m,device):
