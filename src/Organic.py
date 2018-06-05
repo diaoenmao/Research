@@ -7,7 +7,7 @@ from matplotlib import pyplot as plt
      
 class Organic(nn.Module):
 
-    def __init__(self, in_channels, p=torch.tensor([0.5]), device='cuda:0', inplace=False):
+    def __init__(self, in_channels, p=torch.tensor(0.5), device='cuda:0', inplace=False):
         super(Organic, self).__init__()
         self.in_channels = in_channels
         self.device = device
@@ -200,7 +200,11 @@ def gibbs_organic(input,target,mw,m):
     
     cur_z = m.z
     m.update(p=cur_p,z=cur_z)
+    print(m.z)
+    print(m.p)
     output = mw.model(input)
+    print(m.z)
+    print(m.p)
     cur_likelihood = -mw.loss(output,target)
     if(m.if_collapse):
         cur_prior_likelihood = torch.mean(cur_ber.log_prob(cur_z))
