@@ -46,27 +46,26 @@ class Organic_Conv11(nn.Module):
                 Organic(64),                
                 conv(64,128,True),
                 
-                Organic(128),                
+                #Organic(128),                
                 conv(128,256,False),                
-                Organic(256),
+                #Organic(256),
                 conv(256,256,True), 
                 
-                Organic(256),              
+                #Organic(256),              
                 conv(256,512,False),
-                Organic(512),              
+                #Organic(512),              
                 conv(512,512,True),
                 
-                Organic(512),               
+                #Organic(512),               
                 conv(512,512,False),
-                Organic(512),                
+                #Organic(512),                
                 conv(512,512,True)
             )
             self.classifier = nn.Sequential(
                 linear(512,4096),
-                Organic(4096),
-                nn.Dropout(),
+                #Organic(4096),
                 linear(4096,4096),
-                Organic(4096),
+                #Organic(4096),
                 nn.Linear(4096, num_classes)
             )
             if init_weights:
