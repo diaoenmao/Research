@@ -15,8 +15,8 @@ class Organic(nn.Module):
         self.in_channels = in_channels
         self.device = device
         if(p.dim()==0):            
-            self.prior = torch.zeros(int(config.PARAM['data_size']/config.PARAM['batch_size']),2)
-            self.prior[0,:] = torch.ones(2)*config.PARAM['batch_size']/2
+            self.prior = torch.ones(int(config.PARAM['data_size']/config.PARAM['batch_size']),2)
+            #self.prior[0,:] = torch.ones(2)
             self.prior_tracker = 0
             self.concentration = torch.zeros(2)       
             self.p = p.to(self.device)
@@ -41,8 +41,8 @@ class Organic(nn.Module):
 
     def count(self,z):
         if(self.if_collapse):
-            counts_1 = torch.sum(torch.mean(z,dim=1))
-            counts_0 = torch.sum(1-torch.mean(z,dim=1))
+            counts_1 = torch.mean(z)
+            counts_0 = 1-torch.mean(z)
         else:
             counts_1 = torch.sum(z,dim=0)
             counts_0 = z.size(0)-counts_1
@@ -206,7 +206,7 @@ def gibbs_organic(input,target,mw,m):
     cur_beta = m.Beta()
     cur_p = cur_beta.sample().to(m.device)
 
-    #print(m.p)
+    print(cur_p)
     cur_ber = Bernoulli(torch.ones(m.in_channels,device=m.device)*cur_p)    
     cur_z = m.z
     m.update(p=cur_p,z=cur_z)
