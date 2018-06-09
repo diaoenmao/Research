@@ -43,8 +43,8 @@ class Organic_Conv11(nn.Module):
             self.features = nn.Sequential(
                 conv(3,64,True),
                 
-                #Organic(64),
-                nn.Dropout(),                 
+                Organic(64),
+                #nn.Dropout(),                 
                 conv(64,128,True),
                 
                 #Organic(128),                

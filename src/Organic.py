@@ -14,11 +14,13 @@ class Organic(nn.Module):
         super(Organic, self).__init__()
         self.in_channels = in_channels
         self.device = device
+        self.tracker = 0
         if(p.dim()==0):            
             #self.prior = torch.ones(2)*config.PARAM['batch_size']/2
-            #self.concentration = torch.zeros(2)       
-            #self.p = p.to(self.device).expand(config.PARAM['data_size'],1)
-            self.p = p.to(self.device)
+            #self.concentration = torch.zeros(2)
+            self.p = torch.ones(config.PARAM['data_size'],1,device=self.device)*p.to(self.device)
+            self.z = Bernoulli(torch.ones(config.PARAM['data_size'],self.in_channels,device=self.device)*self.p).sample()
+            #self.p = p.to(self.device)
             self.if_collapse = True
         else:
             self.prior = torch.zeros(int(config.PARAM['data_size']/config.PARAM['batch_size']),2,self.in_channels)
@@ -27,7 +29,7 @@ class Organic(nn.Module):
             self.concentration = torch.zeros(2,self.in_channels)
             self.p = torch.ones(in_channels,device=self.device)*p.to(self.device)
             self.if_collapse = False
-        self.z = Bernoulli(torch.ones(self.in_channels,device=self.device)*self.p).sample((config.PARAM['data_size'],))
+
         self.info = Organic_info(self.p,self.if_collapse)
         self.inplace = inplace
     
@@ -76,14 +78,14 @@ class Organic(nn.Module):
         if(concentration is not None):
             self.concentration = concentration
         if(p is not None):
-            self.p = p
+            self.p[self.tracker:self.tracker+config.PARAM['batch_size'],:] = p
         if(z is not None):
-            self.z = z
+            self.z[self.tracker:self.tracker+config.PARAM['batch_size'],:] = z
         assert self.in_channels == self.z.size(1)
         assert (p>=0).all() and (p<=1).all()
         
     def forward(self, input):
-        return organic(input, self.z, self.p, self.training, self.inplace)
+        return organic(input, self.z[self.tracker:self.tracker+config.PARAM['batch_size'],:], self.p[self.tracker:self.tracker+config.PARAM['batch_size'],:], self.training, self.inplace)
         
         
         
@@ -96,14 +98,14 @@ class Organic_info:
         if(p is not None):
             self.p.append(p.to('cpu'))
             
-def update_organic(mw,mode,input=None,target=None,data_loader=None):
+def update_organic(mw,mode,idx=None,input=None,target=None,data_loader=None):
     with torch.no_grad():
         for m in mw.model.modules():
             if isinstance(m, Organic):
                 if(mode=='mh'):
                     mh_organic(input,target,mw,m)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 
                 elif(mode=='gibbs'):
-                    gibbs_organic(input,target,mw,m)
+                    gibbs_organic(input,target,mw,m,idx)
                 elif(mode=='genetic'):
                     genetic_organic(data_loader,mw,m)
                 elif(mode=='forget'):
@@ -202,33 +204,28 @@ def forget_organic(m):
     return
     
 def gibbs_organic(input,target,mw,m,idx):
-    # tracker = idx*config.PARAM['batch_size'] 
-    # cur_z = m.z[tracker:tracker + input.size(0),:]
-    cur_z = m.z
-    cur_p = m.p
-    m.update(p=cur_p,z=cur_z)
+    tracker = idx*config.PARAM['batch_size']
+    m.tracker = tracker
+    mw.criterion.reduce = False    
+    cur_z = m.z[m.tracker:m.tracker + input.size(0),:]
+    cur_p = m.p[m.tracker:m.tracker + input.size(0),:]   
     output = mw.model(input)
     cur_likelihood = -mw.loss(output,target)
-    #cur_prior_likelihood = torch.log(cur_p)
-    #cur_pos = cur_prior_likelihood+cur_likelihood      
-    opposite_cur_z = torch.ones(cur_z.size())
-    #(opposite_cur_z)
-    m.update(p=torch.tensor(1),z=opposite_cur_z)
+    
+    opposite_cur_z = torch.ones(cur_z.size(),device=m.device)
+    m.update(p=torch.ones(config.PARAM['batch_size'],1,device=m.device),z=opposite_cur_z)
     opposite_output = mw.model(input)
     opposite_likelihood = -mw.loss(opposite_output,target) 
-    #opposite_cur_prior_likelihood = torch.log(1-cur_p)
-    #opposite_pos = opposite_cur_prior_likelihood+opposite_likelihood
-    #pos_p = 1/(1+torch.exp(opposite_pos-cur_pos))
     pos_p = 1/(1+torch.exp(cur_likelihood-opposite_likelihood))
-    print(torch.exp(cur_likelihood))
-    print(torch.exp(opposite_likelihood))
-    print(pos_p)
-    new_z = Bernoulli(torch.ones(m.in_channels,device=m.device)*pos_p).sample((input.size(0),))
-    m.step(new_z)    
+    # print(torch.exp(cur_likelihood[:5]))
+    # print(torch.exp(opposite_likelihood[:5]))
+    print(pos_p[:5])
+    pos_p = torch.reshape(pos_p,(pos_p.size(0),1))
+    new_z = Bernoulli(torch.ones(input.size(0),m.in_channels,device=m.device)*pos_p).sample()
     m.update(p=pos_p,z=new_z)
-    m.info.update(p=pos_p)
-    #exit()
-    #m.pred()
+    #m.info.update(p=pos_p)
+    mw.criterion.reduce = True
+
     return  
     
     
