@@ -15,7 +15,7 @@ class Organic(InplaceFunction):
     def forward(cls, ctx, input, z, p, train=False, inplace=False):
         ctx.train = train
         if (p.dim() == 0):
-            if(p.item() == 1 or not ctx.train):
+            if(p == 1 or not ctx.train):
                 return input
             ctx.p = p
         else:

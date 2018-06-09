@@ -15,10 +15,9 @@ class Organic(nn.Module):
         self.in_channels = in_channels
         self.device = device
         if(p.dim()==0):            
-            self.prior = torch.ones(int(config.PARAM['data_size']/config.PARAM['batch_size']),2)
-            #self.prior[0,:] = torch.ones(2)
-            self.prior_tracker = 0
-            self.concentration = torch.zeros(2)       
+            #self.prior = torch.ones(2)*config.PARAM['batch_size']/2
+            #self.concentration = torch.zeros(2)       
+            #self.p = p.to(self.device).expand(config.PARAM['data_size'],1)
             self.p = p.to(self.device)
             self.if_collapse = True
         else:
@@ -28,12 +27,12 @@ class Organic(nn.Module):
             self.concentration = torch.zeros(2,self.in_channels)
             self.p = torch.ones(in_channels,device=self.device)*p.to(self.device)
             self.if_collapse = False
-        self.z = Bernoulli(torch.ones(self.in_channels,device=self.device)*self.p).sample((config.PARAM['batch_size'],))
+        self.z = Bernoulli(torch.ones(self.in_channels,device=self.device)*self.p).sample((config.PARAM['data_size'],))
         self.info = Organic_info(self.p,self.if_collapse)
         self.inplace = inplace
     
     def Beta(self):
-        pos_concentration = torch.sum(self.prior,dim=0)+self.concentration
+        pos_concentration = self.prior[self.prior_tracker,:]+self.concentration
         if(self.if_collapse):            
             return Beta(pos_concentration[0],pos_concentration[1])
         else:
@@ -41,8 +40,8 @@ class Organic(nn.Module):
 
     def count(self,z):
         if(self.if_collapse):
-            counts_1 = torch.mean(z)
-            counts_0 = 1-torch.mean(z)
+            counts_1 = torch.sum(torch.mean(z,dim=1))
+            counts_0 = torch.sum(1-torch.mean(z,dim=1))
         else:
             counts_1 = torch.sum(z,dim=0)
             counts_0 = z.size(0)-counts_1
@@ -58,18 +57,18 @@ class Organic(nn.Module):
             self.concentration[1,:] = counts_0
 
     def pred(self):
-        if(self.if_collapse):
-            self.prior[self.prior_tracker,:] = self.concentration
-        else:
-            self.prior[self.prior_tracker,:,:] = self.concentration
+        # if(self.if_collapse):
+            # self.prior[self.prior_tracker,:] += self.concentration
+        # else:
+            # self.prior[self.prior_tracker,:,:] = self.concentration
         if(self.prior_tracker==self.prior.size(0)-1):
             self.prior_tracker = 0 
         else:
             self.prior_tracker += 1
-        if(self.if_collapse):
-            self.concentration = torch.zeros(2)
-        else:
-            self.concentration = torch.zeros(2,self.in_channels)
+        # if(self.if_collapse):
+            # self.concentration = torch.zeros(2)
+        # else:
+            # self.concentration = torch.zeros(2,self.in_channels)
   
     def update(self,prior=None,concentration=None,p=None,z=None):    
         if(prior is not None):
@@ -198,40 +197,38 @@ def mh_organic(input,target,mw,m):
     return
 
 def forget_organic(m):
-    m.prior /= 25000
-    m.prior *= 50
+    #m.prior /= 25000
+    m.prior *= 0.9
     return
     
-def gibbs_organic(input,target,mw,m):
-    cur_beta = m.Beta()
-    cur_p = cur_beta.sample().to(m.device)
-
-    print(cur_p)
-    cur_ber = Bernoulli(torch.ones(m.in_channels,device=m.device)*cur_p)    
+def gibbs_organic(input,target,mw,m,idx):
+    # tracker = idx*config.PARAM['batch_size'] 
+    # cur_z = m.z[tracker:tracker + input.size(0),:]
     cur_z = m.z
+    cur_p = m.p
     m.update(p=cur_p,z=cur_z)
     output = mw.model(input)
     cur_likelihood = -mw.loss(output,target)
-    if(m.if_collapse):
-        cur_prior_likelihood = torch.mean(cur_ber.log_prob(cur_z))
-    else:
-        cur_prior_likelihood = torch.mean(cur_ber.log_prob(cur_z),dim=0)
-    cur_pos = cur_prior_likelihood+cur_likelihood      
-    opposite_cur_z = 1 - cur_z
-    m.update(p=cur_p,z=opposite_cur_z)
+    #cur_prior_likelihood = torch.log(cur_p)
+    #cur_pos = cur_prior_likelihood+cur_likelihood      
+    opposite_cur_z = torch.ones(cur_z.size())
+    #(opposite_cur_z)
+    m.update(p=torch.tensor(1),z=opposite_cur_z)
     opposite_output = mw.model(input)
     opposite_likelihood = -mw.loss(opposite_output,target) 
-    if(m.if_collapse):
-        opposite_cur_prior_likelihood = torch.mean(cur_ber.log_prob(opposite_cur_z))
-    else:
-        opposite_cur_prior_likelihood = torch.mean(cur_ber.log_prob(opposite_cur_z),dim=0)
-    opposite_pos = opposite_cur_prior_likelihood+opposite_likelihood
-    pos_p = 1/(1+torch.exp(opposite_pos-cur_pos)) 
+    #opposite_cur_prior_likelihood = torch.log(1-cur_p)
+    #opposite_pos = opposite_cur_prior_likelihood+opposite_likelihood
+    #pos_p = 1/(1+torch.exp(opposite_pos-cur_pos))
+    pos_p = 1/(1+torch.exp(cur_likelihood-opposite_likelihood))
+    print(torch.exp(cur_likelihood))
+    print(torch.exp(opposite_likelihood))
+    print(pos_p)
     new_z = Bernoulli(torch.ones(m.in_channels,device=m.device)*pos_p).sample((input.size(0),))
     m.step(new_z)    
-    m.update(p=cur_p,z=new_z)
-    m.info.update(p=cur_p)
-    m.pred()
+    m.update(p=pos_p,z=new_z)
+    m.info.update(p=pos_p)
+    #exit()
+    #m.pred()
     return  
     
     

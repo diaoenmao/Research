@@ -43,7 +43,8 @@ class Organic_Conv11(nn.Module):
             self.features = nn.Sequential(
                 conv(3,64,True),
                 
-                #Organic(64),                
+                #Organic(64),
+                nn.Dropout(),                 
                 conv(64,128,True),
                 
                 #Organic(128),                
@@ -63,9 +64,11 @@ class Organic_Conv11(nn.Module):
             )
             self.classifier = nn.Sequential(
                 linear(512,4096),
-                Organic(4096),
+                #Organic(4096),
+                nn.Dropout(),
                 linear(4096,4096),
-                Organic(4096),
+                #Organic(4096),
+                nn.Dropout(),
                 nn.Linear(4096, num_classes)
             )
             if init_weights:
