@@ -120,7 +120,7 @@ def train(epoch,train_loader, mw):
     for i, (input, target) in enumerate(train_loader):
         input, target = input.to(device), target.to(device)
         data_time.update(time.time() - end)
-        update_organic(mw,'gibbs',idx=i,input=input,target=target)
+        update_organic(mw,'gibbs',input=input,target=target)
         output = mw.model(input)
         loss = mw.loss(output,target)
         losses.update(loss.item(), input.size(0))
