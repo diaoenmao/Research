@@ -34,7 +34,7 @@ class Organic(InplaceFunction):
         
         if (ctx.p.dim() == 0):
             if(ctx.p == 0):
-                ctx.noise = noise.fill(0)
+                ctx.noise = noise.fill_(0)
             else:
                 ctx.noise = noise.div(ctx.p)
         else:

@@ -111,7 +111,7 @@ def update_organic(mw,mode,input=None,target=None,data_loader=None):
                 elif(mode=='forget'):
                     forget_organic(m)
                 elif(mode=='dropout'):
-                    dropout(input,m)
+                    dropout(m)
     return
 
 def report_organic(mw):
@@ -122,10 +122,10 @@ def report_organic(mw):
                 info.append(m.info)
     return info
     
-def dropout(input,m):
+def dropout(m):
     in_channels = m.in_channels
     p = m.p
-    new_z = Bernoulli(torch.ones(in_channels)*p).sample((input.size(0),))
+    new_z = Bernoulli(torch.ones(in_channels,device=m.device)*p).sample((config.PARAM['batch_size'],))
     m.update(p=p,z=new_z)
     return
         
@@ -204,6 +204,7 @@ def forget_organic(m):
     return
     
 def gibbs_organic(input,target,mw,m):
+    m.p = torch.tensor(0.5,device=m.device)
     for i in range(m.in_channels):
         cur_p = m.p
         cur_z = m.z
