@@ -16,7 +16,31 @@ seed = 1234
 def fetch_data(data_name,batch_size):
     print('fetching data...')
     stats_name = './data/stats/stats_{}.pkl'.format(data_name)
-    if(data_name=='CIFAR10' or data_name=='CIFAR100'):
+    if(data_name=='MNIST'):
+        train_dir = './data/{}/train/'.format(data_name)
+        test_dir = './data/{}/test/'.format(data_name)
+        if(not os.path.exists(train_dir)):
+            os.makedirs(train_dir, exist_ok=True)
+        if(not os.path.exists(test_dir)):
+            os.makedirs(train_dir, exist_ok=True)
+        if(os.path.exists(stats_name)):
+            mean,std = load(stats_name)
+        else:
+            train_dataset = datasets.MNIST(root=train_dir, train=True, download=True, transform=transforms.ToTensor())
+            mean,std = get_mean_and_std(train_dataset,data_name)
+        transform_train = transforms.Compose([
+            transforms.ToTensor(),
+            transforms.Normalize(mean, std)
+        ])
+        transform_test = transforms.Compose([
+            transforms.ToTensor(),
+            transforms.Normalize(mean, std)
+        ])
+        train_dataset = datasets.MNIST(root=train_dir, train=True, download=True, transform=transform_train)
+        train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=2, pin_memory=True)
+        test_dataset = datasets.MNIST(root=test_dir, train=False, download=True, transform=transform_test)
+        test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers=2, pin_memory=True)
+    elif(data_name=='CIFAR10' or data_name=='CIFAR100'):
         train_dir = './data/{}/train/'.format(data_name)
         test_dir = './data/{}/test/'.format(data_name)
         if(not os.path.exists(train_dir)):

@@ -10,7 +10,7 @@ config.init()
     
 class Organic(nn.Module):
 
-    def __init__(self, in_channels, p=torch.tensor(0.5), device=config.PARAM['device'], inplace=False):
+    def __init__(self, in_channels, p=torch.tensor([0.5]), device=config.PARAM['device'], inplace=False):
         super(Organic, self).__init__()
         self.in_channels = in_channels
         self.device = device
@@ -23,10 +23,10 @@ class Organic(nn.Module):
             self.p = p.to(self.device)
             self.if_collapse = True
         else:
-            self.prior = torch.zeros(int(config.PARAM['data_size']/config.PARAM['batch_size']),2,self.in_channels)
-            self.prior[0,:,:] = torch.ones(2,self.in_channels)*config.PARAM['batch_size']/2
-            self.prior_tracker = 0
-            self.concentration = torch.zeros(2,self.in_channels)
+            # self.prior = torch.zeros(int(config.PARAM['data_size']/config.PARAM['batch_size']),2,self.in_channels)
+            # self.prior[0,:,:] = torch.ones(2,self.in_channels)*config.PARAM['batch_size']/2
+            # self.prior_tracker = 0
+            # self.concentration = torch.zeros(2,self.in_channels)
             self.p = torch.ones(in_channels,device=self.device)*p.to(self.device)
             self.if_collapse = False
         self.z = Bernoulli(torch.ones(self.in_channels,device=self.device)*self.p).sample((config.PARAM['batch_size'],))
@@ -204,7 +204,6 @@ def forget_organic(m):
     return
     
 def gibbs_organic(input,target,mw,m):
-    m.p = torch.tensor(0.5,device=m.device)
     for i in range(m.in_channels):
         cur_p = m.p
         cur_z = m.z
@@ -214,8 +213,8 @@ def gibbs_organic(input,target,mw,m):
         cur_z[:,i] = 0
         output_0 = mw.model(input)
         likelihood_0 = torch.exp(-mw.loss(output_0,target))          
-        cur_p = cur_p*likelihood_1/(cur_p*likelihood_1+(1-cur_p)*likelihood_0)
-        cur_z[:,i] = Bernoulli(torch.ones(input.size(0),device=m.device)*cur_p).sample()
+        cur_p[i] = cur_p[i]*likelihood_1/(cur_p[i]*likelihood_1+(1-cur_p[i])*likelihood_0)
+        cur_z[:,i] = Bernoulli(torch.ones(input.size(0),device=m.device)*cur_p[i]).sample()
         # print(likelihood_1)
         # print(likelihood_0)
         # print(cur_p)

@@ -12,9 +12,9 @@ import models as models
 from modelWrapper import *
 from Organic import *
 
-data_name = 'CIFAR10'
-model_dir = 'cifar'
-model_name = 'organic_conv11'
+data_name = 'MNIST'
+model_dir = 'mnist'
+model_name = 'organic_conv'
 TAG = data_name+'_'+model_name
 config.init()
 batch_size = config.PARAM['batch_size']
@@ -117,17 +117,13 @@ def train(epoch,train_loader, mw):
     top5 = Meter()
     mw.model.train()
     end = time.time()
-    # if(epoch+1 in [1,50,150,250]):
-        # for i, (input, target) in enumerate(train_loader):
-            # input, target = input.to(device), target.to(device)
-            # update_organic(mw,'gibbs',input=input,target=target)
+    for i, (input, target) in enumerate(train_loader):
+        input, target = input.to(device), target.to(device)
+        update_organic(mw,'gibbs',input=input,target=target)
     for i, (input, target) in enumerate(train_loader):
         input, target = input.to(device), target.to(device)
         data_time.update(time.time() - end)
-        if(epoch+1 in [1,50,150,250]):
-            update_organic(mw,'gibbs',input=input,target=target)
-        else:
-            update_organic(mw,'dropout')
+        update_organic(mw,'dropout')
         output = mw.model(input)
         loss = mw.loss(output,target)
         losses.update(loss.item(), input.size(0))
@@ -148,7 +144,6 @@ def train(epoch,train_loader, mw):
                   'Prec@5 {top5.val:.3f} ({top5.avg:.3f})'.format(
                    epoch, i+1, len(train_loader), batch_time=batch_time,
                    data_time=data_time, loss=losses, top1=top1, top5=top5)) 
-    #update_organic(mw,'forget')
     return batch_time,data_time,losses,top1,top5
   
     
