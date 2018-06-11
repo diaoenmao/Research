@@ -8,7 +8,7 @@ def passthrough(x, **kwargs):
     return x
 
 class Dropout_Conv(nn.Module):
-    def __init__(sel,num_classes=10):
+    def __init__(self,num_classes=10):
         super(Dropout_Conv, self).__init__()
         self.conv1 = nn.Conv2d(1, 10, kernel_size=5)
         self.conv2 = nn.Conv2d(10, 20, kernel_size=5)

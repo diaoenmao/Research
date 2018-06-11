@@ -73,7 +73,7 @@ def runExperiment(seed,Experiment_TAG):
     for epoch in range(init_epoch,init_epoch+max_num_epochs):
         scheduler.step()
         new_train_result = train(epoch,train_loader,mw)
-        organic_result = report_organic(mw)
+        #organic_result = report_organic(mw)
         new_test_result = test(test_loader, mw)
         prec1 = new_test_result[3].avg
         is_best = prec1 > best_prec1
@@ -99,7 +99,7 @@ def runExperiment(seed,Experiment_TAG):
             for i in range(len(train_result)):
                 train_result[i].merge(new_train_result[i])
                 test_result[i].merge(new_test_result[i])
-        save([train_result,test_result,organic_result],'./output/result/{}_{}'.format(Experiment_TAG,epoch))
+        save([train_result,test_result],'./output/result/{}_{}'.format(Experiment_TAG,epoch))
         save_checkpoint({
             'seed': seed,
             'epoch': epoch,
@@ -117,6 +117,7 @@ def train(epoch,train_loader, mw):
     top5 = Meter()
     mw.model.train()
     end = time.time()
+    update_organic(mw,'reset')
     for i, (input, target) in enumerate(train_loader):
         input, target = input.to(device), target.to(device)
         update_organic(mw,'gibbs',input=input,target=target)

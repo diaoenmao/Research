@@ -30,7 +30,7 @@ class Organic(nn.Module):
             self.p = torch.ones(in_channels,device=self.device)*p.to(self.device)
             self.if_collapse = False
         self.z = Bernoulli(torch.ones(self.in_channels,device=self.device)*self.p).sample((config.PARAM['batch_size'],))
-        self.info = Organic_info(self.p,self.if_collapse)
+        #self.info = Organic_info(self.p,self.if_collapse)
         self.inplace = inplace
     
     def Beta(self):
@@ -82,8 +82,18 @@ class Organic(nn.Module):
         if(z is not None):
             self.z = z
         assert self.in_channels == self.z.size(1)
-        assert (p>=0).all() and (p<=1).all()
-        
+        if(not (p>=0).all() and (p<=1).all()):
+            print('invalid p')
+            print(p)
+            exit()
+    
+    def reset(self):
+        if(self.if_collapse):
+            self.p = torch.tensor(0.5).to(self.device)
+        else:
+            self.p = (torch.ones(self.in_channels,device=self.device)*0.5).to(self.device)
+        self.z = Bernoulli(torch.ones(self.in_channels,device=self.device)*self.p).sample((config.PARAM['batch_size'],))
+
     def forward(self, input):
         return organic(input, self.z, self.p, self.training, self.inplace)
         
@@ -110,6 +120,8 @@ def update_organic(mw,mode,input=None,target=None,data_loader=None):
                     genetic_organic(data_loader,mw,m)
                 elif(mode=='forget'):
                     forget_organic(m)
+                elif(mode=='reset'):
+                    reset_organic(m)
                 elif(mode=='dropout'):
                     dropout(m)
     return
@@ -121,6 +133,9 @@ def report_organic(mw):
             if isinstance(m, Organic):
                 info.append(m.info)
     return info
+
+def reset_organic(m):
+    m.reset()
     
 def dropout(m):
     in_channels = m.in_channels
