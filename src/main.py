@@ -67,7 +67,7 @@ def runExperiment(seed,Experiment_TAG):
         best_prec1 = 0
         best_epoch = 1 
         
-    scheduler = MultiStepLR(mw.optimizer, milestones=[50,150,250], gamma=0.1)
+    scheduler = MultiStepLR(mw.optimizer, milestones=[30,100,150], gamma=0.1)
     train_result = None
     test_result = None
     for epoch in range(init_epoch,init_epoch+max_num_epochs):
@@ -117,14 +117,12 @@ def train(epoch,train_loader, mw):
     top5 = Meter()
     mw.model.train()
     end = time.time()
-    update_organic(mw,'reset')
     for i, (input, target) in enumerate(train_loader):
         input, target = input.to(device), target.to(device)
+        update_organic(mw,'reset') 
         update_organic(mw,'gibbs',input=input,target=target)
-    for i, (input, target) in enumerate(train_loader):
-        input, target = input.to(device), target.to(device)
+        update_organic(mw,'report') 
         data_time.update(time.time() - end)
-        update_organic(mw,'dropout')
         output = mw.model(input)
         loss = mw.loss(output,target)
         losses.update(loss.item(), input.size(0))

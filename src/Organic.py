@@ -234,7 +234,7 @@ def gibbs_organic(input,target,mw,m):
         # print(likelihood_0)
         # print(cur_p)
         m.update(p=cur_p)
-    print(cur_p)
+    #print(cur_p)
     return  
     
     
