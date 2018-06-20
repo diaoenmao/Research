@@ -75,7 +75,7 @@ def runExperiment(seed,Experiment_TAG):
         best_prec1 = 0
         best_epoch = 1 
         
-    scheduler = MultiStepLR(mw.optimizer, milestones=[150], gamma=0.1)
+    scheduler = MultiStepLR(mw.optimizer, milestones=[10,20], gamma=0.1),
     train_result = None
     test_result = None
 

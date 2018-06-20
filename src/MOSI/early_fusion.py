@@ -35,12 +35,11 @@ def main():
         init_seed = 0
     seeds = list(range(init_seed,init_seed+num_Experiments))
     for i in range(len(seeds)):
-        runExperiment(seeds[i],'{}_{}'.format(TAG,seeds[i]))
-        if(if_show):
-            plt_result(seeds[i])
+        runExperiment('{}_{}'.format(TAG,seeds[i]))
     return
     
-def runExperiment(seed,Experiment_TAG):
+def runExperiment(TAG):
+    seed = TAG.split('_')[-1]
     torch.manual_seed(seed)
     torch.cuda.manual_seed(seed)
     visual_train_loader,visual_valid_loader,visual_eval_loader,visual_test_loader = fetch_Multimodal_data(data_name,'visual',batch_size)
@@ -54,7 +53,7 @@ def runExperiment(seed,Experiment_TAG):
     #train_loader,valid_loader,eval_loader,test_loader = text_train_loader,text_valid_loader,text_eval_loader,text_test_loader
     train_loader,valid_loader,eval_loader,test_loader = combined_train_loader,combined_valid_loader,combined_eval_loader,combined_test_loader
     
-    criterion = nn.CrossEntropyLoss().to(device)
+    criterion = nn.MultiMarginLoss(p=2,margin=1).to(device)
     model = eval('models.{}.{}(input_feature={},output_feature={}).to(device)'.format(model_dir,model_name,input_feature,output_feature))
     mw = modelWrapper(model,config.PARAM['optimizer_name'])
     mw.set_optimizer_param(config.PARAM['optimizer_param'])
@@ -96,7 +95,7 @@ def runExperiment(seed,Experiment_TAG):
             for i in range(len(train_result)):
                 train_result[i].merge(new_train_result[i])
                 test_result[i].merge(new_test_result[i])
-        save([train_result,test_result],'./output/result/{}_{}'.format(Experiment_TAG,epoch))
+        save([train_result,test_result],'./output/result/{}_{}'.format(TAG,epoch))
         save_checkpoint({
             'seed': seed,
             'epoch': epoch,
@@ -104,15 +103,17 @@ def runExperiment(seed,Experiment_TAG):
             'best_prec1': best_prec1,
             'best_epoch': best_epoch,
             'optimizer' : mw.optimizer.state_dict(),
-        }, is_best)
+        }, is_best,TAG)
         
-    best = load('./output/model/best_{}.pth'.format(seed))
+    best = load('./output/model/best_{}.pth'.format(TAG))
     mw.model.load_state_dict(best['state_dict'])
     mw.optimizer.load_state_dict(best['optimizer'])    
     final_test_result = test(test_loader, mw)
-    save(final_test_result,'./output/result/final_{}'.format(Experiment_TAG))
+    save(final_test_result,'./output/result/final_{}'.format(TAG))
     print('Test Result:')
     print_meter(final_test_result)
+    if(if_show):
+        plt_result(TAG)
     return
     
 def train(epoch,train_loader, mw):
@@ -193,18 +194,19 @@ def test(val_loader, mw):
     return batch_time,data_time,losses,top1,top5
 
 
-def save_checkpoint(state, is_best, filename='./output/model/checkpoint.pth'):
+def save_checkpoint(state, is_best, TAG):
+    filename='./output/model/checkpoint_{}.pth'.format(TAG)
     save(state, filename)
     if is_best:
-        shutil.copyfile(filename, './output/model/best_{}.pth'.format(state['seed']))          
+        shutil.copyfile(filename, './output/model/best_{}.pth'.format(TAG))          
     return
     
-def plt_result(seed):
-    best = load('./output/model/best_{}.pth'.format(seed))
+def plt_result(TAG):
+    best = load('./output/model/best_{}.pth'.format(TAG))
     best_prec1 = best['best_prec1']
     best_epoch = best['best_epoch']
-    train_result,test_result = load('./output/result/{}_{}_{}'.format(TAG,seed,best_epoch))
-    plt_meter([train_result,test_result],['train','test'],'{}_{}_{}'.format(TAG,seed,best_epoch))
+    train_result,test_result = load('./output/result/{}_{}'.format(TAG,best_epoch))
+    plt_meter([train_result,test_result],['train','test'],'{}_{}'.format(TAG,best_epoch))
     return
     
     

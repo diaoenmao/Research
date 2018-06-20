@@ -1,1 +1,0 @@
-In order to run the Python 3.6 code, you need to pay attention to the path of the two RNA data files (.txt) that are used.

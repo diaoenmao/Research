@@ -229,8 +229,8 @@ def get_mean_and_std(dataset,data_name=''):
     print('==> Computing mean and std..')
     for inputs, targets in dataloader:
         for i in range(num_c):
-            mean[i] += inputs[:,i,:,:].mean()
-            std[i] += inputs[:,i,:,:].std()
+            mean[i] += inputs[:,i,].mean()
+            std[i] += inputs[:,i,].std()
     mean.div_(len(dataset))
     std.div_(len(dataset))
     save([mean,std],'./data/stats/stats_{}.pkl'.format(data_name))
