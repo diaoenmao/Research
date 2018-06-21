@@ -13,44 +13,45 @@ sys.path.append("./CMU-MultimodalDataSDK/")
 from mmdata import Dataloader, Dataset
 
 
-def fetch_Multimodal_data(data_name,data_mode,batch_size):
+def fetch_Multimodal_data(data_name,data_mode,label_mode,batch_size):
     print('fetching data...')
-    stats_name = './data/stats/stats_{}_{}.pkl'.format(data_name,data_mode)
+    stats_name = './data/stats/stats_{}_{}_{}.pkl'.format(data_name,data_mode,label_mode)
     if(data_name=='MOSI'):
         if(os.path.exists(stats_name)):
             mean,std = load(stats_name)
         else:
-            train_dataset = ModalityDataset(data_mode, 'train', download=True)
-            valid_dataset = ModalityDataset(data_mode, 'valid', download=True)
+            train_dataset = ModalityDataset(data_mode, label_mode, 'train', download=True)
+            valid_dataset = ModalityDataset(data_mode, label_mode, 'valid', download=True)
             eval_dataset = torch.utils.data.ConcatDataset([train_dataset,valid_dataset])
-            mean,std = get_mean_and_std(eval_dataset,'{}_{}'.format(data_name,data_mode))
+            mean,std = get_mean_and_std(eval_dataset,'{}_{}_{}'.format(data_name,data_mode,label_mode))
         transform_train = transforms.Compose([
             transforms.Normalize(mean, std)
         ])
         transform_test = transforms.Compose([
             transforms.Normalize(mean, std)
         ])
-        train_dataset = ModalityDataset(data_mode, 'train', download=True, transform=None)
+        train_dataset = ModalityDataset(data_mode, label_mode, 'train', download=True, transform=None)
         train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=2, pin_memory=True)
-        valid_dataset = ModalityDataset(data_mode, 'valid', download=True, transform=None)
+        valid_dataset = ModalityDataset(data_mode, label_mode, 'valid', download=True, transform=None)
         valid_loader = torch.utils.data.DataLoader(valid_dataset, batch_size=batch_size, shuffle=False, num_workers=2, pin_memory=True) 
         eval_dataset = torch.utils.data.ConcatDataset([train_dataset,valid_dataset])
         eval_loader = torch.utils.data.DataLoader(eval_dataset, batch_size=batch_size, shuffle=False, num_workers=2, pin_memory=True)
-        test_dataset = ModalityDataset(data_mode, 'test', download=True, transform=None)
+        test_dataset = ModalityDataset(data_mode, label_mode, 'test', download=True, transform=None)
         test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers=2, pin_memory=True) 
     return train_loader,valid_loader,eval_loader,test_loader
     
 class ModalityDataset(Dataset):
     """Modality dataset."""
 
-    def __init__(self, data_mode, mode, transform=None, target_transform=None, download=False):
+    def __init__(self, data_mode, label_mode, mode, transform=None, target_transform=None, download=False):
         if(mode not in ['train','valid','test']):
             raise ValueError('Invalid mode')
         if(data_mode not in ['visual','audio','text','combined']):
             raise ValueError('Invalid data mode')
         self.mode = mode
         self.data_mode = data_mode
-        self.root = './data/'+self.data_mode+'.pt'
+        self.label_mode = label_mode
+        self.root = './data/{}/{}.pt'.format(self.label_mode,self.data_mode)
         if download:
             self.download()
         if not self._check_exists():
@@ -96,7 +97,7 @@ class ModalityDataset(Dataset):
     def download(self):
         if self._check_exists():
             return
-        download_Multimodal_data('MOSI')
+        download_Multimodal_data('MOSI',self.label_mode)
     
 def pad(data, max_len):
     """A funtion for padding/truncating sequence data to a given lenght"""
@@ -112,7 +113,7 @@ def pad(data, max_len):
     else:
         return data[-max_len:]
 
-def download_Multimodal_data(data_name,max_len=20):
+def download_Multimodal_data(data_name,label_mode,max_len=20):
     # Download the data if not present
     data = Dataloader('http://sorena.multicomp.cs.cmu.edu/downloads/'+data_name)
     embeddings = data.embeddings()
@@ -162,25 +163,30 @@ def download_Multimodal_data(data_name,max_len=20):
     valid_set_text = np.stack([pad(dataset['embeddings'][vid][sid], max_len) for (vid, sid) in valid_set_ids], axis=0)
     test_set_text = np.stack([pad(dataset['embeddings'][vid][sid], max_len) for (vid, sid) in test_set_ids], axis=0)
 
-    
-    # the sentiment scores for 7-class classification task
-    y_train = np.round(np.array([sentiments[vid][sid] for (vid, sid) in train_set_ids])).astype(np.int64)
-    y_valid = np.round(np.array([sentiments[vid][sid] for (vid, sid) in valid_set_ids])).astype(np.int64)
-    y_test = np.round(np.array([sentiments[vid][sid] for (vid, sid) in test_set_ids])).astype(np.int64)
-    ground_label = min([np.min(y_train),np.min(y_valid),np.min(y_test)])
-    y_train -= ground_label
-    y_valid -= ground_label
-    y_test -= ground_label
-
-    # the sentiment scores for binary classification task
-    # y_train = (np.array([sentiments[vid][sid] for (vid, sid) in train_set_ids]) > 0).astype(np.int64)
-    # y_valid = (np.array([sentiments[vid][sid] for (vid, sid) in valid_set_ids]) > 0).astype(np.int64)
-    # y_test = (np.array([sentiments[vid][sid] for (vid, sid) in test_set_ids]) > 0).astype(np.int64)
-    
+    if(label_mode=='7_class'):        
+        # the sentiment scores for 7-class classification task
+        y_train = np.round(np.array([sentiments[vid][sid] for (vid, sid) in train_set_ids])).astype(np.int64)
+        y_valid = np.round(np.array([sentiments[vid][sid] for (vid, sid) in valid_set_ids])).astype(np.int64)
+        y_test = np.round(np.array([sentiments[vid][sid] for (vid, sid) in test_set_ids])).astype(np.int64)
+        ground_label = min([np.min(y_train),np.min(y_valid),np.min(y_test)])
+        y_train -= ground_label
+        y_valid -= ground_label
+        y_test -= ground_label
+    elif(label_mode=='binary'):
+        #the sentiment scores for binary classification task
+        y_train = (np.array([sentiments[vid][sid] for (vid, sid) in train_set_ids]) > 0).astype(np.int64)
+        y_valid = (np.array([sentiments[vid][sid] for (vid, sid) in valid_set_ids]) > 0).astype(np.int64)
+        y_test = (np.array([sentiments[vid][sid] for (vid, sid) in test_set_ids]) > 0).astype(np.int64)
+        
+    elif(label_mode=='regression'):
+        #the sentiment scores for regression task
+        y_train = np.array([sentiments[vid][sid] for (vid, sid) in train_set_ids]).astype(np.float32)
+        y_valid = np.array([sentiments[vid][sid] for (vid, sid) in valid_set_ids]).astype(np.float32)
+        y_test = np.array([sentiments[vid][sid] for (vid, sid) in test_set_ids]).astype(np.float32)
+        
     # y_train = np.array([sentiments[vid][sid] for (vid, sid) in train_set_ids])
     # y_valid = np.array([sentiments[vid][sid] for (vid, sid) in valid_set_ids])
     # y_test = np.array([sentiments[vid][sid] for (vid, sid) in test_set_ids])
-
     
     # normalize covarep and facet features, remove possible NaN values
     visual_max = np.max(np.max(np.abs(train_set_visual), axis=0), axis=0)
@@ -210,14 +216,14 @@ def download_Multimodal_data(data_name,max_len=20):
 
     for i in range(len(data_mode)):
         x_train, x_valid, x_test = train_sets[i].astype(np.float32), valid_sets[i].astype(np.float32), test_sets[i].astype(np.float32)
-        save([x_train, x_valid, x_test, y_train, y_valid, y_test], './data/'+ data_mode[i] + '.pt')
+        save([x_train, x_valid, x_test, y_train, y_valid, y_test], './data/{}/{}.pt'.format(label_mode,data_mode[i]))
     
     #early fusion: input level concatenation of features
     x_train = np.concatenate((train_set_visual, train_set_audio, train_set_text), axis=2).astype(np.float32)
     x_valid = np.concatenate((valid_set_visual, valid_set_audio, valid_set_text), axis=2).astype(np.float32)
     x_test = np.concatenate((test_set_visual, test_set_audio, test_set_text), axis=2).astype(np.float32)
 
-    save([x_train, x_valid, x_test, y_train, y_valid, y_test], './data/combined.pt')
+    save([x_train, x_valid, x_test, y_train, y_valid, y_test], './data/{}/combined.pt'.format(label_mode))
     return
 
 def get_mean_and_std(dataset,data_name=''):

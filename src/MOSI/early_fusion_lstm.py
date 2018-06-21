@@ -86,22 +86,23 @@ if __name__ == "__main__":
     test_set_text = np.stack([pad(dataset['embeddings'][vid][sid], max_len) for (vid, sid) in test_set_ids], axis=0)
 
     # the sentiment scores for 7-class classification task
-    y_train = np.round(np.array([sentiments[vid][sid] for (vid, sid) in train_set_ids])).astype(np.int64)
-    y_valid = np.round(np.array([sentiments[vid][sid] for (vid, sid) in valid_set_ids])).astype(np.int64)
-    y_test = np.round(np.array([sentiments[vid][sid] for (vid, sid) in test_set_ids])).astype(np.int64)
-    ground_label = min([np.min(y_train),np.min(y_valid),np.min(y_test)])
-    y_train -= ground_label
-    y_valid -= ground_label
-    y_test -= ground_label
+    # y_train = np.round(np.array([sentiments[vid][sid] for (vid, sid) in train_set_ids])).astype(np.int64)
+    # y_valid = np.round(np.array([sentiments[vid][sid] for (vid, sid) in valid_set_ids])).astype(np.int64)
+    # y_test = np.round(np.array([sentiments[vid][sid] for (vid, sid) in test_set_ids])).astype(np.int64)
+    # ground_label = min([np.min(y_train),np.min(y_valid),np.min(y_test)])
+    # y_train -= ground_label
+    # y_valid -= ground_label
+    # y_test -= ground_label
+    
     # y_train = to_categorical(y_train)
     # y_valid = to_categorical(y_valid)
     # y_test = to_categorical(y_test)
 
     
     # the sentiment scores for binary classification task
-    # y_train = np.array([sentiments[vid][sid] for (vid, sid) in train_set_ids]) > 0
-    # y_valid = np.array([sentiments[vid][sid] for (vid, sid) in valid_set_ids]) > 0
-    # y_test = np.array([sentiments[vid][sid] for (vid, sid) in test_set_ids]) > 0
+    y_train = np.array([sentiments[vid][sid] for (vid, sid) in train_set_ids]) > 0
+    y_valid = np.array([sentiments[vid][sid] for (vid, sid) in valid_set_ids]) > 0
+    y_test = np.array([sentiments[vid][sid] for (vid, sid) in test_set_ids]) > 0
 
     # normalize covarep and facet features, remove possible NaN values
     visual_max = np.max(np.max(np.abs(train_set_visual), axis=0), axis=0)

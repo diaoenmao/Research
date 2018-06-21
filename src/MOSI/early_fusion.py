@@ -13,8 +13,9 @@ from modelWrapper import *
 
 data_name = 'MOSI'
 model_dir = 'mosi'
-model_name = 'conv'
-TAG = data_name+'_'+model_name
+model_name = 'lstm'
+label_mode = 'regression'
+TAG = data_name+'_'+model_name+'_'+label_mode
 config.init()
 batch_size = config.PARAM['batch_size']
 device = torch.device(config.PARAM['device'])    
@@ -24,7 +25,22 @@ if_resume = config.PARAM['if_resume']
 if_show = config.PARAM['if_show']
 num_Experiments = 1
 input_feature = 420
-output_feature = 7
+
+def from_label_mode():
+    if(label_mode=='regression'):
+        criterion = nn.L1Loss().to(device)
+        output_feature = 1
+    elif(label_mode=='binary'):
+        criterion = nn.CrossEntropyLoss().to(device)
+        #criterion = nn.MultiMarginLoss(p=1,margin=1).to(device)
+        output_feature = 2        
+    elif(label_mode=='seven'):
+        criterion = nn.CrossEntropyLoss().to(device)
+        #criterion = nn.MultiMarginLoss(p=1,margin=1).to(device)
+        output_feature = 7
+    return criterion,output_feature
+    
+criterion,output_feature = from_label_mode()
 cudnn.benchmark = True
 
 def main():
@@ -37,15 +53,15 @@ def main():
     for i in range(len(seeds)):
         runExperiment('{}_{}'.format(TAG,seeds[i]))
     return
-    
+        
 def runExperiment(TAG):
     seed = TAG.split('_')[-1]
     torch.manual_seed(seed)
     torch.cuda.manual_seed(seed)
-    visual_train_loader,visual_valid_loader,visual_eval_loader,visual_test_loader = fetch_Multimodal_data(data_name,'visual',batch_size)
-    audio_train_loader,audio_valid_loader,audio_eval_loader,audio_test_loader = fetch_Multimodal_data(data_name,'audio',batch_size)
-    text_train_loader,text_valid_loader,text_eval_loader,text_test_loader = fetch_Multimodal_data(data_name,'text',batch_size)
-    combined_train_loader,combined_valid_loader,combined_eval_loader,combined_test_loader = fetch_Multimodal_data(data_name,'combined',batch_size)   
+    visual_train_loader,visual_valid_loader,visual_eval_loader,visual_test_loader = fetch_Multimodal_data(data_name,'visual',label_mode,batch_size)
+    audio_train_loader,audio_valid_loader,audio_eval_loader,audio_test_loader = fetch_Multimodal_data(data_name,'audio',label_mode,batch_size)
+    text_train_loader,text_valid_loader,text_eval_loader,text_test_loader = fetch_Multimodal_data(data_name,'text',label_mode,batch_size)
+    combined_train_loader,combined_valid_loader,combined_eval_loader,combined_test_loader = fetch_Multimodal_data(data_name,'combined',label_mode,batch_size)   
     print('data ready')
     
     #train_loader,valid_loader,eval_loader,test_loader = visual_train_loader,visual_valid_loader,visual_eval_loader,visual_test_loader
@@ -53,7 +69,6 @@ def runExperiment(TAG):
     #train_loader,valid_loader,eval_loader,test_loader = text_train_loader,text_valid_loader,text_eval_loader,text_test_loader
     train_loader,valid_loader,eval_loader,test_loader = combined_train_loader,combined_valid_loader,combined_eval_loader,combined_test_loader
     
-    criterion = nn.MultiMarginLoss(p=2,margin=1).to(device)
     model = eval('models.{}.{}(input_feature={},output_feature={}).to(device)'.format(model_dir,model_name,input_feature,output_feature))
     mw = modelWrapper(model,config.PARAM['optimizer_name'])
     mw.set_optimizer_param(config.PARAM['optimizer_param'])
@@ -71,7 +86,10 @@ def runExperiment(TAG):
             .format(checkpoint['epoch']))
     else:
         init_epoch = 0
-        best_prec1 = 0
+        if(output_feature>1):
+            best_prec1 = 0
+        else:
+            best_prec1 = 10
         best_epoch = 1 
         
     scheduler = MultiStepLR(mw.optimizer, milestones=[150], gamma=0.1)
@@ -82,10 +100,15 @@ def runExperiment(TAG):
         scheduler.step()
         new_train_result = train(epoch,eval_loader,mw)
         new_test_result = test(test_loader, mw)
-        prec1 = new_test_result[3].avg
-        is_best = prec1 > best_prec1
+        if(output_feature>1):
+            prec1 = new_test_result[3].avg
+            is_best = prec1 > best_prec1
+            best_prec1 = max(prec1, best_prec1)
+        else:
+            prec1 = new_test_result[2].avg
+            is_best = prec1 < best_prec1
+            best_prec1 = min(prec1, best_prec1)
         best_epoch = epoch if(is_best) else best_epoch
-        best_prec1 = max(prec1, best_prec1)
         print('Epoch: {0}\t'.format(epoch), end='')
         print_meter(new_test_result)           
         if(train_result is None):
@@ -132,12 +155,16 @@ def train(epoch,train_loader, mw):
         output = mw.model(input)
         loss = mw.loss(output,target)
         losses.update(loss.item(), input.size(0))
-        if(output_feature>5):
-            prec1, prec5 = mw.acc(output, target, topk=(1, 5))
+        if(output_feature>1):
+            if(output_feature>5):
+                prec1, prec5 = mw.acc(output, target, topk=(1, 5))
+            else:
+                prec1, prec5 = mw.acc(output, target, topk=(1, 1))
+            top1.update(prec1[0], input.size(0))
+            top5.update(prec5[0], input.size(0))
         else:
-            prec1, prec5 = mw.acc(output, target, topk=(1, 1))
-        top1.update(prec1[0], input.size(0))
-        top5.update(prec5[0], input.size(0))
+            top1.update(0, input.size(0))
+            top5.update(0, input.size(0))
         mw.optimizer.zero_grad()
         loss.backward()
         mw.optimizer.step()
@@ -172,12 +199,16 @@ def test(val_loader, mw):
             output = mw.model(input)
             loss = mw.loss(output,target)
             losses.update(loss.item(), input.size(0))
-            if(output_feature>5):
-                prec1, prec5 = mw.acc(output, target, topk=(1, 5))
+            if(output_feature>1):
+                if(output_feature>5):
+                    prec1, prec5 = mw.acc(output, target, topk=(1, 5))
+                else:
+                    prec1, prec5 = mw.acc(output, target, topk=(1, 1))
+                top1.update(prec1[0], input.size(0))
+                top5.update(prec5[0], input.size(0))
             else:
-                prec1, prec5 = mw.acc(output, target, topk=(1, 1))
-            top1.update(prec1[0], input.size(0))
-            top5.update(prec5[0], input.size(0))
+                top1.update(0, input.size(0))
+                top5.update(0, input.size(0))
             batch_time.update(time.time() - end)
             end = time.time()
 

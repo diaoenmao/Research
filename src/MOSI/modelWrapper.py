@@ -33,7 +33,9 @@ class modelWrapper:
     def num_parameters(self):
         return sum(p.numel() for p in self.parameters() if p.requires_grad) 
         
-    def loss(self,output,target):        
+    def loss(self,output,target):
+        if(target.dim()==1 and output.size(1)==1):
+            output = output.view(output.size(0))
         loss = self.criterion(output, target)
         return loss
         
