@@ -25,7 +25,7 @@ if_resume = config.PARAM['if_resume']
 if_show = config.PARAM['if_show']
 num_Experiments = 1
 input_feature = 420
-
+hidden_feature = {'conv':3*64, 'lstm':256}
 def from_label_mode():
     if(label_mode=='regression'):
         criterion = nn.L1Loss().to(device)
@@ -69,7 +69,7 @@ def runExperiment(TAG):
     #train_loader,valid_loader,eval_loader,test_loader = text_train_loader,text_valid_loader,text_eval_loader,text_test_loader
     train_loader,valid_loader,eval_loader,test_loader = combined_train_loader,combined_valid_loader,combined_eval_loader,combined_test_loader
     
-    model = eval('models.{}.{}(input_feature={},output_feature={}).to(device)'.format(model_dir,model_name,input_feature,output_feature))
+    model = eval('models.{}.{}(input_feature={},output_feature={},hidden_feature={}).to(device)'.format(model_dir,model_name,input_feature,output_feature,hidden_feature[model_name]))
     mw = modelWrapper(model,config.PARAM['optimizer_name'])
     mw.set_optimizer_param(config.PARAM['optimizer_param'])
     mw.set_criterion(criterion)

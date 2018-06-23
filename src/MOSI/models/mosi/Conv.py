@@ -26,25 +26,25 @@ class _conv(nn.Module):
         
 class Conv(nn.Module):
 
-    def __init__(self, input_feature, output_feature=1000, init_weights=True):
+    def __init__(self, input_feature, output_feature, hidden_feature, init_weights=True):
             super(Conv, self).__init__()
             self.bn = nn.BatchNorm1d(input_feature)
             self.features = nn.Sequential(
-                _conv(input_feature,64,False),
-                _conv(64,128,True),  
+                _conv(input_feature,hidden_feature,False),
+                _conv(hidden_feature,hidden_feature*2,True),  
                 
-                _conv(128,128,False),
-                _conv(128,256,True), 
+                _conv(hidden_feature*2,hidden_feature*2,False),
+                _conv(hidden_feature*2,hidden_feature*4,True), 
                 
-                _conv(256,256,False),                
-                _conv(256,512,True), 
+                _conv(hidden_feature*4,hidden_feature*4,False),                
+                _conv(hidden_feature*4,hidden_feature*8,True), 
                             
-                _conv(512,512,False),             
-                _conv(512,512,True),
+                _conv(hidden_feature*8,hidden_feature*8,False),             
+                _conv(hidden_feature*8,hidden_feature*8,True),
                             
             )
             self.classifier = nn.Sequential(
-                nn.Linear(512, output_feature)
+                nn.Linear(hidden_feature*8, output_feature)
             )
             if init_weights:
                 self._initialize_weights()

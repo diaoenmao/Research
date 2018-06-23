@@ -15,7 +15,7 @@ from modelWrapper import *
 data_name = 'MOSI'
 model_dir = 'mosi'
 model_name = 'conv'
-label_mode = 'regression'
+label_mode = 'seven'
 TAG = data_name+'_'+model_name+'_'+label_mode
 config.init()
 batch_size = config.PARAM['batch_size']
@@ -26,6 +26,7 @@ if_resume = config.PARAM['if_resume']
 if_show = config.PARAM['if_show']
 num_Experiments = 1
 input_feature = [46,74,300]
+hidden_feature = {'conv':64, 'lstm':128}
 def from_label_mode():
     if(label_mode=='regression'):
         criterion = nn.L1Loss().to(device)
@@ -42,7 +43,7 @@ def from_label_mode():
 criterion,output_feature = from_label_mode()
 cudnn.benchmark = True
 modality_name = ['visual','audio','text']
-merge_mode = 'average'
+merge_mode = 'concat'
 
 def main():
     if(if_resume):
@@ -59,10 +60,10 @@ def runExperiment(TAG):
     seed = TAG.split('_')[-1]
     torch.manual_seed(seed)
     torch.cuda.manual_seed(seed)
-    visual_train_loader,visual_valid_loader,visual_eval_loader,visual_test_loader = fetch_Multimodal_data(data_name,'visual',batch_size)
-    audio_train_loader,audio_valid_loader,audio_eval_loader,audio_test_loader = fetch_Multimodal_data(data_name,'audio',batch_size)
-    text_train_loader,text_valid_loader,text_eval_loader,text_test_loader = fetch_Multimodal_data(data_name,'text',batch_size)
-    combined_train_loader,combined_valid_loader,combined_eval_loader,combined_test_loader = fetch_Multimodal_data(data_name,'combined',batch_size)   
+    visual_train_loader,visual_valid_loader,visual_eval_loader,visual_test_loader = fetch_Multimodal_data(data_name,'visual',label_mode,batch_size)
+    audio_train_loader,audio_valid_loader,audio_eval_loader,audio_test_loader = fetch_Multimodal_data(data_name,'audio',label_mode,batch_size)
+    text_train_loader,text_valid_loader,text_eval_loader,text_test_loader = fetch_Multimodal_data(data_name,'text',label_mode,batch_size)
+    combined_train_loader,combined_valid_loader,combined_eval_loader,combined_test_loader = fetch_Multimodal_data(data_name,'combined',label_mode,batch_size)   
     print('data ready')
     
     #train_loader,valid_loader,eval_loader,test_loader = visual_train_loader,visual_valid_loader,visual_eval_loader,visual_test_loader
@@ -73,21 +74,29 @@ def runExperiment(TAG):
     valid_loader = [visual_valid_loader,audio_valid_loader,text_valid_loader]
     eval_loader = [visual_eval_loader,audio_eval_loader,text_eval_loader]
     test_loader = [visual_test_loader,audio_test_loader,text_test_loader]
-    model_weight = np.zeros(3)
-    print("Compute model weight")
-    mw = create_mw()
-    for i in range(len(modality_name)):
-        print('Train '+ modality_name[i])
-        model_weight[i] = train_modality(train_loader[i],valid_loader[i],mw[i],TAG+'_'+modality_name[i])
-    model_weight = model_weight/np.sum(model_weight)
-    print(model_weight)
+    if(merge_mode=='average'):
+        model_weight = np.zeros(3)
+        print("Compute model weight")
+        mw = create_mw()
+        for i in range(len(modality_name)):
+            print('Train '+ modality_name[i])
+            model_weight[i] = train_modality(train_loader[i],valid_loader[i],mw[i],TAG+'_'+modality_name[i])
+        model_weight = model_weight/np.sum(model_weight)
+        print(model_weight)
     
-    print("train Model")
+    print("Train Model")
     mw = create_mw()
     for i in range(len(modality_name)):
         print('Train '+ modality_name[i])
         train_modality(eval_loader[i],test_loader[i],mw[i],TAG+'_'+modality_name[i])
+        
     mw = merge_mw(merge_mode,TAG)
+    print("Test Merged Model")
+    merged_test_result = test(combined_test_loader, mw)
+    print('Test Result:')
+    print_meter(merged_test_result)
+    save(merged_test_result,'./output/result/merged_{}'.format(TAG))
+    
     print("Retrain Full Model")       
     if(if_resume):
         checkpoint = torch.load('./output/model/checkpoint_{}.pth'.format(TAG))
@@ -151,7 +160,7 @@ def runExperiment(TAG):
 def create_mw():
     mw = []
     for i in range(len(modality_name)): 
-        model = eval('models.{}.{}(input_feature={},output_feature={}).to(device)'.format(model_dir,model_name,input_feature[i],output_feature))
+        model = eval('models.{}.{}(input_feature={},output_feature={},hidden_feature={}).to(device)'.format(model_dir,model_name,input_feature[i],output_feature,hidden_feature[model_name]))
         mw.append(modelWrapper(model,config.PARAM['optimizer_name']))
         mw[i].set_optimizer_param(config.PARAM['optimizer_param'])
         mw[i].set_criterion(criterion)
@@ -160,25 +169,34 @@ def create_mw():
 
 
 def merge_mw(mode,TAG,weight=None):
-    model = eval('models.{}.{}(input_feature={},output_feature={}).to(device)'.format(model_dir,model_name,sum(input_feature),output_feature))
+    model = eval('models.{}.{}(input_feature={},output_feature={},hidden_feature={}).to(device)'.format(model_dir,model_name,sum(input_feature),output_feature,len(modality_name)*hidden_feature[model_name]))
     target_mw = modelWrapper(model,config.PARAM['optimizer_name'])
     target_dict = target_mw.model.state_dict()
-    copy_target_dict = copy.deepcopy(target_dict)
-    for k,_ in copy_target_dict.items():
-        copy_target_dict[k].fill_(0)
     if(mode=='average'):
+        copy_target_dict = copy.deepcopy(target_dict)
+        for k,_ in copy_target_dict.items():
+            copy_target_dict[k].fill_(0)
         if(weight is None):
             weight = np.ones(len(modality_name))/len(modality_name)       
         for i in range(len(modality_name)):
             best = torch.load('./output/model/best_{}.pth'.format(TAG+'_'+modality_name[i]))            
             for k,v in best['state_dict'].items():
-                if(copy_target_dict[k].size()==best['state_dict'][k].size()):
-                    copy_target_dict[k] += torch.tensor(weight[i],device=device)*best['state_dict'][k]
-                else:
-                    copy_target_dict[k] = target_dict[k]
+                if(copy_target_dict[k].dim()>1 and k.split('.')[0]!='classifier'):
+                    if(copy_target_dict[k].size()==best['state_dict'][k].size()):
+                        copy_target_dict[k] += torch.tensor(weight[i],device=device)*best['state_dict'][k]
+                    else:
+                        copy_target_dict[k] = target_dict[k]
         target_mw.model.load_state_dict(copy_target_dict)
-    elif(mode=='concat'):
-        print('aa')
+    elif(mode=='concat'):          
+        for k,v in target_dict.items():
+            tracker = [0,0]
+            if(target_dict[k].dim()>1 and k.split('.')[0]!='classifier'):
+                for i in range(len(modality_name)):
+                    best = torch.load('./output/model/best_{}.pth'.format(TAG+'_'+modality_name[i]))  
+                    output_span,input_span =  best['state_dict'][k].size(0),best['state_dict'][k].size(1)
+                    target_dict[k][tracker[0]:tracker[0]+output_span,tracker[1]:tracker[1]+input_span,] = best['state_dict'][k]
+                    tracker[0],tracker[1] = tracker[0]+output_span,tracker[1]+input_span                  
+        target_mw.model.load_state_dict(target_dict)
     else:
         error('merge mode not supported')
     target_mw.set_optimizer_param(config.PARAM['optimizer_param'])

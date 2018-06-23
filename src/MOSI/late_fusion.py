@@ -25,6 +25,7 @@ if_resume = config.PARAM['if_resume']
 if_show = config.PARAM['if_show']
 num_Experiments = 1
 input_feature = [46,74,300]
+hidden_feature = {'conv':64, 'lstm':128}
 def from_label_mode():
     if(label_mode=='regression'):
         criterion = nn.L1Loss().to(device)
@@ -96,7 +97,7 @@ def runExperiment(TAG):
 def create_mw():
     mw = []
     for i in range(len(modality_name)): 
-        model = eval('models.{}.{}(input_feature={},output_feature={}).to(device)'.format(model_dir,model_name,input_feature[i],output_feature))
+        model = eval('models.{}.{}(input_feature={},output_feature={},hidden_feature={}).to(device)'.format(model_dir,model_name,input_feature[i],output_feature,hidden_feature[model_name]))
         mw.append(modelWrapper(model,config.PARAM['optimizer_name']))
         mw[i].set_optimizer_param(config.PARAM['optimizer_param'])
         mw[i].set_criterion(criterion)

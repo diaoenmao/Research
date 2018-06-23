@@ -11,5 +11,5 @@ def init():
         'if_resume': False,
         'if_show': True,
         'verbose': False,
-        'max_num_epochs': 3,
+        'max_num_epochs': 20,
     }

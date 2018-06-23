@@ -7,9 +7,9 @@ def passthrough(x, **kwargs):
     return x
 
 class _LSTM(nn.Module):
-    def __init__(self,input_feature,output_feature=10):
+    def __init__(self,input_feature,output_feature,hidden_feature):
         super(_LSTM, self).__init__()
-        self.hidden_dim=128
+        self.hidden_dim=hidden_feature
         self.bn1 = nn.BatchNorm1d(input_feature)
         self.rnn1 = nn.LSTM(input_feature,self.hidden_dim, bidirectional=False)
         self.dropout1 = nn.Dropout()
