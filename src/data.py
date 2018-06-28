@@ -255,10 +255,7 @@ def sample_data(dataSize,X,y,randomGen = np.random.RandomState(seed)):
         exit()
     return sampled_X, sampled_y
 
-def split_data_p(X,y,test_size=0.80,randomGen = np.random.RandomState(seed)):
-    dataSize = X.shape[0]
-    if(test_size>0 and test_size<1):
-        test_size = np.int(dataSize*(1-test_size))
+def split_data_p(X,y,test_size=0.2,randomGen = np.random.RandomState(seed)):
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size, random_state=randomGen)
     return X_train, X_test, y_train, y_test
 

@@ -4,7 +4,6 @@ import config
 import time
 import torch.backends.cudnn as cudnn
 from torch import nn
-from torch.autograd import Variable
 from torch.optim.lr_scheduler import MultiStepLR
 from data import *
 from util import *

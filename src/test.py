@@ -1,8 +1,14 @@
 import torch
 import numpy as np
+import time
 from util import *
 from data import *
-from model import *
+from torch.distributions.multivariate_normal import MultivariateNormal 
+from torch.distributions.normal import Normal
+from sklearn.datasets import load_boston
+from torch import nn
+import torch.nn.functional as F
+
 
 # X, y = fetch_data_mld()
 # valid_target = np.array([5])
@@ -106,4 +112,164 @@ from model import *
 # print(a_2.shape)
 # a_3 = np.sum(np.matmul(a_1,a_2),0)
 # print(a_3)
+
+
+
+# t = np.arange(0,10,1/50)
+# signal1 = np.sin(2*np.pi*15*t) + np.sin(2*np.pi*20*t)
+# signal2 = np.sin(2*np.pi*10*t) + np.sin(2*np.pi*5*t)
+# signal = np.vstack((signal1,signal2))
+# # plt.figure()
+# # plt.plot(t,signal)
+# # plt.show()
+# sp = np.fft.fft(signal,axis=1)
+# mag_sp = np.absolute(sp)
+# f = np.arange(0,sp.shape[1])*50/sp.shape[1]
+# plt.figure()
+# plt.plot(f,mag_sp[1,:])
+# plt.show()
+
+# def is_pos_def(x):
+    # return np.all(np.linalg.eigvals(x) > 0)
+
+# def entropy(var):
+    # if(len(var.shape)>1):
+        # sign, logdet = np.linalg.slogdet(2*np.pi*np.e*var)
+        # entropy = 0.5*sign*logdet
+    # else:
+        # entropy = 0.5*(np.log(2*np.pi*np.e*var))
+    # return entropy
+    
+# t = 1    
+# batch_size = 1000
+# dim = 5
+# p=np.ones(dim)*1
+# p[1] = 0.2 
+# x = np.random.randn(batch_size,dim)
+# x[:,1] = 0.1*np.power(x[:,0],1)+0.3*np.power(x[:,2],1)+0.001*np.random.rand(batch_size)
+# z = np.random.rand(batch_size,dim)<=p
+# cov_x = np.cov(x.T)
+# x = x * z / p
+# mean_x = np.mean(x,axis=0)
+# cov_x = np.cov(x.T)
+
+# mean_x = torch.from_numpy(np.mean(x,axis=0))
+# cov_x = torch.from_numpy(np.cov(x.T))
+# print(mean_x)
+# print(cov_x)
+
+# marg_cov_x = torch.diag(torch.diagonal(cov_x))
+# mvn = MultivariateNormal(mean_x,covariance_matrix=cov_x)
+# marg_mvn = MultivariateNormal(mean_x,covariance_matrix=marg_cov_x)
+# joint_entropy = mvn.entropy()
+# marg_entropy = marg_mvn.entropy()
+# total_correlation = marg_entropy - joint_entropy
+# print(joint_entropy)
+# print(marg_entropy)
+# print(total_correlation)
+
+# s = time.time()
+# metric = np.zeros(dim)
+# for r in range(t):
+    # for i in range(dim):
+        # entropy_this = entropy(cov_x[i,i])
+        # tmp = np.delete(cov_x,i,0)
+        # cov_other = np.delete(tmp,i,1)
+        # entropy_marg = entropy(np.diagonal(cov_x))
+        # entropy_other_marg = np.delete(entropy_marg,i,0)
+        # entropy_other = entropy(cov_other)
+        # entropy_joint = entropy(cov_x)
+
+        # # print(entropy_this)
+        # # print(entropy_marg)
+        # # print(entropy_other)
+        # print(entropy_joint)
+
+        # metric[i] = entropy_this-(entropy_joint-entropy_other)
+        
+    # print(metric)
+# e = time.time()
+# print("Elapsed Time:", (e-s))
+
+class LinearRegressionModel(nn.Module):
+
+    def __init__(self, input_dim, output_dim):
+        super(LinearRegressionModel, self).__init__() 
+        self.linear = nn.Linear(input_dim, output_dim)
+
+    def forward(self, x):
+        out = self.linear(x)
+        return out
+
+class SigmoidMappedLinearRegressionModel(nn.Module):
+
+    def __init__(self, input_dim, output_dim):
+        super(SigmoidMappedLinearRegressionModel, self).__init__() 
+        self.linear = nn.Linear(input_dim, output_dim)
+        self.feature_select = nn.Linear(input_dim, output_dim)
+    def forward(self, x):
+        map = F.sigmoid(self.feature_select(x))
+        print(map)
+        out = self.linear(x)
+        mapped_out = out*map/torch.mean(map)
+        return out
+
+class SoftmaxMappedLinearRegressionModel(nn.Module):
+
+    def __init__(self, input_dim, output_dim):
+        super(SoftmaxMappedLinearRegressionModel, self).__init__() 
+        self.linear = nn.Linear(input_dim, output_dim)
+        self.feature_select = nn.Linear(input_dim, input_dim)
+    def forward(self, x):
+        map = F.softmax(self.feature_select(x),dim=1)
+        print(map[map!=0])
+        mapped_x = x*map
+        out = self.linear(mapped_x)
+        return out
+        
+class DropoutLinearRegressionModel(nn.Module):
+
+    def __init__(self, input_dim, output_dim):
+        super(DropoutLinearRegressionModel, self).__init__() 
+        self.linear = nn.Linear(input_dim, output_dim)
+        self.dp = nn.Dropout(0.001)
+    def forward(self, x):
+        dropped_x = self.dp(x)
+        out = self.linear(dropped_x)
+        return out
+        
+model = SigmoidMappedLinearRegressionModel(13,1)
+criterion = nn.MSELoss()
+lr = 1
+optimiser = torch.optim.LBFGS(model.parameters(), lr = lr)
+
+epochs = 100
+seed = 3
+input,target = load_boston(return_X_y=True)
+X_train, X_test, y_train, y_test = split_data_p(input,target,randomGen = np.random.RandomState(seed))
+
+
+for epoch in range(epochs):
+    input = torch.from_numpy(X_train).to(torch.float32)
+    target = torch.from_numpy(y_train).to(torch.float32)
+    def closure():
+        optimiser.zero_grad()
+        output = model.forward(input).squeeze()
+        loss = criterion(output, target)
+        loss.backward()
+        # if(model is SigmoidMappedLinearRegressionModel or SoftmaxMappedLinearRegressionModel):
+            # for p in model.feature_select.parameters():
+                # print(p)
+        return loss
+    optimiser.step(closure)
+    with torch.no_grad():
+        input = torch.from_numpy(X_test).to(torch.float32)
+        target = torch.from_numpy(y_test).to(torch.float32)
+        output = model.forward(input).squeeze()
+        loss = criterion(output, target)
+        print('epoch: {}, loss: {}'.format(epoch,loss.item()))
+
+
+
+
 
