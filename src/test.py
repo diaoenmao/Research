@@ -191,83 +191,81 @@ import torch.nn.functional as F
 # e = time.time()
 # print("Elapsed Time:", (e-s))
 
-class LinearRegressionModel(nn.Module):
+# class LinearRegression(nn.Module):
 
-    def __init__(self, input_dim, output_dim):
-        super(LinearRegressionModel, self).__init__() 
-        self.linear = nn.Linear(input_dim, output_dim)
+    # def __init__(self, input_dim, output_dim):
+        # super(LinearRegression, self).__init__() 
+        # self.linear = nn.Linear(input_dim, output_dim)
 
-    def forward(self, x):
-        out = self.linear(x)
-        return out
+    # def forward(self, x):
+        # out = self.linear(x)
+        # return out
 
-class SigmoidMappedLinearRegressionModel(nn.Module):
+# class GatedLinearRegression(nn.Module):
 
-    def __init__(self, input_dim, output_dim):
-        super(SigmoidMappedLinearRegressionModel, self).__init__() 
-        self.linear = nn.Linear(input_dim, output_dim)
-        self.feature_select = nn.Linear(input_dim, output_dim)
-    def forward(self, x):
-        map = F.sigmoid(self.feature_select(x))
-        print(map)
-        out = self.linear(x)
-        mapped_out = out*map/torch.mean(map)
-        return out
-
-class SoftmaxMappedLinearRegressionModel(nn.Module):
-
-    def __init__(self, input_dim, output_dim):
-        super(SoftmaxMappedLinearRegressionModel, self).__init__() 
-        self.linear = nn.Linear(input_dim, output_dim)
-        self.feature_select = nn.Linear(input_dim, input_dim)
-    def forward(self, x):
-        map = F.softmax(self.feature_select(x),dim=1)
-        print(map[map!=0])
-        mapped_x = x*map
-        out = self.linear(mapped_x)
-        return out
+    # def __init__(self, input_dim, output_dim):
+        # super(GatedLinearRegression, self).__init__() 
+        # self.linear = nn.Linear(input_dim, output_dim)
+        # self.feature_select = nn.Linear(input_dim, output_dim)
+    # def forward(self, x):
+        # fs = self.feature_select(x)
+        # map = F.sigmoid(fs)
+        # x = self.linear(x)
+        # x = x*map/torch.mean(map)
+        # return x
         
-class DropoutLinearRegressionModel(nn.Module):
+# class DropoutLinearRegression(nn.Module):
 
-    def __init__(self, input_dim, output_dim):
-        super(DropoutLinearRegressionModel, self).__init__() 
-        self.linear = nn.Linear(input_dim, output_dim)
-        self.dp = nn.Dropout(0.001)
-    def forward(self, x):
-        dropped_x = self.dp(x)
-        out = self.linear(dropped_x)
-        return out
+    # def __init__(self, input_dim, output_dim):
+        # super(DropoutLinearRegression, self).__init__() 
+        # self.linear = nn.Linear(input_dim, output_dim)
+        # self.dp = nn.Dropout(0.01)
+    # def forward(self, x):
+        # x = self.linear(x)
+        # x = self.dp(x)
+        # return x
+ 
+# class NeuralNet(nn.Module):
+    # def __init__(self, input_size, hidden_size, num_classes):
+        # super(NeuralNet, self).__init__()
+        # self.fc1 = nn.Linear(input_size, hidden_size) 
+        # self.relu = nn.ReLU()
+        # self.fc2 = nn.Linear(hidden_size, num_classes)  
+    
+    # def forward(self, x):
+        # out = self.fc1(x)
+        # out = self.relu(out)
+        # out = self.fc2(out)
+        # return out
         
-model = SigmoidMappedLinearRegressionModel(13,1)
-criterion = nn.MSELoss()
-lr = 1
-optimiser = torch.optim.LBFGS(model.parameters(), lr = lr)
+# model = LinearRegression(13,1) 
+# #model = GatedLinearRegression(13,1)        
+# #model = DropoutLinearRegression(13,1)
+# #model = NeuralNet(13,5,1)
+# criterion = nn.MSELoss()
+# lr = 1e-4
+# optimiser = torch.optim.SGD(model.parameters(), lr = lr)
 
-epochs = 100
-seed = 3
-input,target = load_boston(return_X_y=True)
-X_train, X_test, y_train, y_test = split_data_p(input,target,randomGen = np.random.RandomState(seed))
+# epochs = 100
+# seed = 1
+# input,target = load_boston(return_X_y=True)
+# X_train, X_test, y_train, y_test = split_data_p(input,target,randomGen = np.random.RandomState(seed))
+# torch.from_numpy(X_train).to(torch.float32)
+# target = torch.from_numpy(y_train).to(torch.float32)
 
+# for epoch in range(epochs):
 
-for epoch in range(epochs):
-    input = torch.from_numpy(X_train).to(torch.float32)
-    target = torch.from_numpy(y_train).to(torch.float32)
-    def closure():
-        optimiser.zero_grad()
-        output = model.forward(input).squeeze()
-        loss = criterion(output, target)
-        loss.backward()
-        # if(model is SigmoidMappedLinearRegressionModel or SoftmaxMappedLinearRegressionModel):
-            # for p in model.feature_select.parameters():
-                # print(p)
-        return loss
-    optimiser.step(closure)
-    with torch.no_grad():
-        input = torch.from_numpy(X_test).to(torch.float32)
-        target = torch.from_numpy(y_test).to(torch.float32)
-        output = model.forward(input).squeeze()
-        loss = criterion(output, target)
-        print('epoch: {}, loss: {}'.format(epoch,loss.item()))
+    # optimiser.zero_grad()
+    # output = model.forward(input).squeeze()
+    # loss = criterion(output, target)
+    # loss.backward()
+    # optimiser.step()
+    # with torch.no_grad():
+        # input = torch.from_numpy(X_test).to(torch.float32)
+        # target = torch.from_numpy(y_test).to(torch.float32)
+        # output = model.forward(input).squeeze()
+        # loss = criterion(output, target)
+        # print('epoch: {}, loss: {}'.format(epoch,loss.item()))
 
 
 
