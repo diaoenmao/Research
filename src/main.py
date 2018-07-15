@@ -13,7 +13,7 @@ from Organic import *
 
 data_name = 'MNIST'
 model_dir = 'mnist'
-model_name = 'organic_conv'
+model_name = 'organic'
 TAG = data_name+'_'+model_name
 config.init()
 batch_size = config.PARAM['batch_size']
@@ -72,7 +72,6 @@ def runExperiment(seed,Experiment_TAG):
     for epoch in range(init_epoch,init_epoch+max_num_epochs):
         scheduler.step()
         new_train_result = train(epoch,train_loader,mw)
-        #organic_result = report_organic(mw)
         new_test_result = test(test_loader, mw)
         prec1 = new_test_result[3].avg
         is_best = prec1 > best_prec1
@@ -83,14 +82,7 @@ def runExperiment(seed,Experiment_TAG):
               'Prec@1 {prec1.avg:.3f}\t'
               'Prec@5 {prec5.avg:.3f}\t'
               'Time {time}\t'
-              .format(epoch,losses=new_test_result[2],prec1=new_test_result[3],prec5=new_test_result[4],time=new_train_result[0].avg*len(train_loader)))
-        # if(len(organic_result)>0):
-            # print('Organic probability:')
-            # for i in range(len(organic_result)):
-                # if(organic_result[i].if_collapse):
-                    # print(organic_result[i].p[-1].item())
-                # else:
-                    # print(organic_result[i].p[-1][:10])                    
+              .format(epoch,losses=new_test_result[2],prec1=new_test_result[3],prec5=new_test_result[4],time=new_train_result[0].avg*len(train_loader)))                    
         if(train_result is None):
             train_result = list(new_train_result)
             test_result = list(new_test_result)            
@@ -118,8 +110,6 @@ def train(epoch,train_loader, mw):
     end = time.time()
     for i, (input, target) in enumerate(train_loader):
         input, target = input.to(device), target.to(device)
-        update_organic(mw,'reset') 
-        update_organic(mw,'gibbs',input=input,target=target)
         data_time.update(time.time() - end)
         output = mw.model(input)
         loss = mw.loss(output,target)
@@ -141,7 +131,6 @@ def train(epoch,train_loader, mw):
                   'Prec@5 {top5.val:.3f} ({top5.avg:.3f})'.format(
                    epoch, i+1, len(train_loader), batch_time=batch_time,
                    data_time=data_time, loss=losses, top1=top1, top5=top5))
-    update_organic(mw,'report') 
     return batch_time,data_time,losses,top1,top5
   
     
