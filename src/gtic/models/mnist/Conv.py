@@ -2,7 +2,6 @@ import torch
 import numpy as np
 import torch.nn.functional as F
 from torch import nn
-from Organic import *
 
 class Conv(nn.Module):
     def __init__(self,num_classes=10):
@@ -22,8 +21,8 @@ class Conv(nn.Module):
         return x
 
         
-def Conv(**kwargs):
-    model = conv(**kwargs)
+def conv(**kwargs):
+    model = Conv(**kwargs)
     return model
     
     
@@ -46,5 +45,5 @@ class Organic(nn.Module):
 
         
 def organic(**kwargs):
-    model = organic(**kwargs)
+    model = Organic(**kwargs)
     return model

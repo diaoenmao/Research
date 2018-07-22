@@ -1,3 +1,4 @@
+from .synth import *
 from .mnist import *
 from .cifar import *
 from .imagenet import *

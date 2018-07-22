@@ -69,7 +69,7 @@ def get_correct_cnt(output,target):
     
 def get_acc(output,target,topk):  
     with torch.no_grad():
-        maxk = max(topk)
+        maxk = min(max(topk),output.size(1))
         batch_size = target.size(0)
         _, pred = output.topk(maxk, 1, True, True)
         pred = pred.t()
@@ -77,17 +77,23 @@ def get_acc(output,target,topk):
 
         acc = []
         for k in topk:
-            correct_k = correct[:k].view(-1).float().sum(0, keepdim=True)
-            acc.append(correct_k.mul_(100.0 / batch_size))            
+            if(k<=maxk):
+                correct_k = correct[:k].view(-1).float().sum(0, keepdim=True)
+                cur_acc = correct_k.mul_(100.0 / batch_size)
+                acc.append(cur_acc.item())
+            else:
+                acc.append(1.0)
     return acc
 
-def gen_input_features(dims,init_size=None,step_size=None,start_point=None):
-    if (init_size is None):
-        init_size=[2]*len(dims) 
-    if (step_size is None):
-        step_size = [1]*len(dims) 
+def modelselect_input_feature(dims,init_size=2,step_size=1,start_point=None):
+    if(isinstance(dims, int)):
+        dims = [dims]
+    init_size=[init_size]*len(dims) 
+    step_size = [step_size]*len(dims) 
     if (start_point is None):
-        start_point = [np.int(dims[i]/2) for i in range(len(dims))] 
+        start_point = [np.int(dims[i]/2) for i in range(len(dims))]
+    else:
+        start_point = [0 for i in range(len(dims))]
     ifcovered = [False]*len(dims)
     input_features = []
     j = 0
@@ -145,7 +151,26 @@ class Meter(object):
     def merge(self, meter):
         self.history_val.extend(meter.history_val)
         self.history_avg.extend(meter.history_avg)
-        
+
+def print_result(epoch,train_result,test_result):
+    print('Epoch: {0}\t'
+        'Loss {losses.avg:.4f}\t'
+        'Prec@1 {prec1.avg:.3f}\t'
+        'Prec@5 {prec5.avg:.3f}\t'
+        'Time {time}\t'
+        .format(epoch,losses=test_result[2],prec1=test_result[3],prec5=test_result[4],time=train_result[0].sum))
+    return
+
+def merge_result(train_result,test_result,new_train_result,new_test_result):
+    if(train_result is None):
+        train_result = list(new_train_result)
+        test_result = list(new_test_result)            
+    else:
+        for i in range(len(train_result)):
+            train_result[i].merge(new_train_result[i])
+            test_result[i].merge(new_test_result[i])
+    return train_result,test_result
+    
 # ===================Function===================== 
 def p_inverse(A):
     pinv = (A.t().matmul(A)).inverse().matmul(A.t())
@@ -191,6 +216,14 @@ def plt_dist(x):
     plt.hist(x)
     plt.show()
 
+def plt_result(seed):
+    best = load('./output/model/best_{}.pth'.format(seed))
+    best_prec1 = best['best_prec1']
+    best_epoch = best['best_epoch']
+    train_result,test_result,_ = load('./output/result/{}_{}_{}'.format(TAG,seed,best_epoch))
+    plt_meter([train_result,test_result],['train','test'],'{}_{}_{}'.format(TAG,seed,best_epoch))
+    return
+    
 def plt_meter(Meters,names,TAG):
     colors = ['r','b']
     print('Figure name: {}'.format(TAG))

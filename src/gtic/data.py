@@ -8,12 +8,13 @@ from sklearn.utils import shuffle
 from sklearn.model_selection import train_test_split
 from sklearn.model_selection import KFold
 from torch.utils.data import DataLoader
+from torch.utils.data.sampler import SubsetRandomSampler
 from util import *
 
 
 seed = 1234
 
-def fetch_data(data_name,batch_size):
+def fetch_dataset(data_name):
     print('fetching data...')
     stats_name = './data/stats/stats_{}.pkl'.format(data_name)
     if(data_name=='MNIST'):
@@ -37,9 +38,8 @@ def fetch_data(data_name,batch_size):
             transforms.Normalize(mean, std)
         ])
         train_dataset = datasets.MNIST(root=train_dir, train=True, download=True, transform=transform_train)
-        train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=2, pin_memory=True)
         test_dataset = datasets.MNIST(root=test_dir, train=False, download=True, transform=transform_test)
-        test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers=2, pin_memory=True)
+
     elif(data_name=='CIFAR10' or data_name=='CIFAR100'):
         train_dir = './data/{}/train/'.format(data_name)
         test_dir = './data/{}/test/'.format(data_name)
@@ -192,26 +192,71 @@ def fetch_data(data_name,batch_size):
         train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=2, pin_memory=True)
         test_dataset = datasets.EMNIST(root=test_dir, split=type, train=False, download=True, transform=transform_test)
         test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers=2, pin_memory=True)        
-    return train_loader,test_loader
-    
-def fetch_data_linear(dataSize,input_features,out_features=1,high_dim=None,cov_mode='base',noise_sigma=np.sqrt(0.1),randomGen = np.random.RandomState(seed)):
-    print('fetching data...')
-    V = gen_cov_mat(input_features,cov_mode)
-    X = randomGen.multivariate_normal(np.zeros(input_features),V,dataSize)
-    if(high_dim is None):
-            beta = randomGen.randn(input_features,out_features)           
+    return train_dataset,test_dataset
+
+def split_dataset(train_dataset,test_dataset,data_size,batch_size,num_fold,p=0.8):
+    indices = list(range(len(train_dataset)))
+    data_idx = np.random.choice(indices, size=data_size, replace=False)
+    if(num_fold==0):
+        train_sampler = SubsetRandomSampler(data_idx)
+        if(batch_size==0):
+            batch_size = data_size
+        train_loader = torch.utils.data.DataLoader(dataset=train_dataset, 
+                    batch_size=batch_size, sampler=train_sampler, num_workers=2)    
+        validation_loader = None
+    elif(num_fold==1):
+        train_idx = np.random.choice(data_idx, size=int(data_size*p), replace=False)
+        train_sampler = SubsetRandomSampler(train_idx)
+        if(batch_size==0):
+            batch_size = len(train_idx)
+        train_loader = torch.utils.data.DataLoader(dataset=train_dataset, 
+                    batch_size=batch_size, sampler=train_sampler, num_workers=2)    
+        validation_idx = list(set(indices) - set(train_idx))
+        validation_sampler = SubsetRandomSampler(validation_idx)
+        validation_loader = torch.utils.data.DataLoader(dataset=train_dataset, 
+                    batch_size=1, sampler=validation_sampler, num_workers=2)
+    elif(num_fold>1 and num_fold<=len(indices)):
+        splitted_idx = np.split(data_idx, num_fold)
+        train_loader = []
+        validation_loader = []
+        for i in range(num_fold):
+            validation_idx = splitted_idx[i]
+            train_idx = list(set(data_idx) - set(validation_idx))
+            train_sampler = SubsetRandomSampler(train_idx)
+            if(batch_size==0):
+                batch_size = len(train_idx)
+            train_loader = torch.utils.data.DataLoader(dataset=train_dataset, 
+                batch_size=batch_size, sampler=train_sampler, num_workers=2) 
+            validation_sampler = SubsetRandomSampler(validation_idx)
+            validation_loader = torch.utils.data.DataLoader(dataset=train_dataset, 
+                batch_size=1, sampler=validation_sampler, num_workers=2)       
     else:
-        if(high_dim>=input_features):
+        error("Invalid number of fold")
+        exit()
+    test_loader = torch.utils.data.DataLoader(dataset=test_dataset, 
+                batch_size=1, num_workers=2)
+    return train_loader,validation_loader,test_loader
+    
+def fetch_dataset_synth(input_feature,output_feature,high_dim=None,cov_mode='base',noise_sigma=np.sqrt(0.1),randomGen = np.random.RandomState(seed)):
+    print('fetching data...')
+    data_size = 50000
+    test_size = 10000
+    V = gen_cov_mat(input_feature,cov_mode)
+    X = randomGen.multivariate_normal(np.zeros(input_feature),V,data_size+test_size)
+    if(high_dim is None):
+            beta = randomGen.randn(input_feature,output_feature)           
+    else:
+        if(high_dim>=input_feature):
             print('invalid high dimension')
             exit()
-        valid_beta = randomGen.randn(high_dim,out_features)
-        empty_beta = np.zeros((input_features-high_dim,out_features))
+        valid_beta = randomGen.randn(high_dim,output_feature)
+        empty_beta = np.zeros((input_feature-high_dim,output_feature))
         beta = np.vstack((valid_beta,empty_beta))
     mu = np.matmul(X,beta)
     eps = noise_sigma*randomGen.randn(*mu.shape)
-    if(out_features==1):
+    if(output_feature==1):
         y = mu + eps
-    elif(out_features>1):      
+    elif(output_feature>1):      
         p = softmax(mu + eps)
         y = []
         for i in range(X.shape[0]):
@@ -222,7 +267,10 @@ def fetch_data_linear(dataSize,input_features,out_features=1,high_dim=None,cov_m
         print('invalid dimension')
         exit()
     print('data ready')
-    return X, y
+    X,y = X.astype(np.float32),y.astype(np.int64)
+    train_dataset = torch.utils.data.TensorDataset(torch.from_numpy(X[:data_size,:]), torch.from_numpy(y[:data_size]))
+    test_dataset = torch.utils.data.TensorDataset(torch.from_numpy(X[data_size:,:]), torch.from_numpy(y[data_size:]))
+    return train_dataset,test_dataset
     
 def gen_cov_mat(dim,mode,zo=0.5):
     if(mode=='base'):
@@ -389,15 +437,14 @@ def denormalize(norm_input,norm_target=None,TAG=''):
     return denorm_input,denorm_target
 
 def get_mean_and_std(dataset,data_name=''):
-    '''Compute the mean and std value of dataset.'''
     dataloader = torch.utils.data.DataLoader(dataset, batch_size=1, shuffle=True, num_workers=2)
     mean = torch.zeros(3)
     std = torch.zeros(3)
     print('==> Computing mean and std..')
     for inputs, targets in dataloader:
         for i in range(inputs.size(1)):
-            mean[i] += inputs[:,i,:,:].mean()
-            std[i] += inputs[:,i,:,:].std()
+            mean[i] += inputs[:,i,].mean()
+            std[i] += inputs[:,i,].std()
     mean.div_(len(dataset))
     std.div_(len(dataset))
     save([mean,std],'./data/stats/stats_{}.pkl'.format(data_name))

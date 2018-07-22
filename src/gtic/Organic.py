@@ -85,7 +85,7 @@ class Organic(nn.Module):
         assert (p>=0).all() and (p<=1).all()
         
     def forward(self, input):
-
+        return organic(input, self.z, self.p, self.training, self.inplace)
     
 
 

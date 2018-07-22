@@ -26,12 +26,25 @@ class modelWrapper:
                 
     def set_criterion(self,criterion):
         self.criterion = criterion
+
+    def num_parameters(self):
+        return sum(p.numel() for p in self.parameters() if p.requires_grad) 
         
     def parameters(self):
         return list(self.model.parameters())
         
-    def num_parameters(self):
-        return sum(p.numel() for p in self.parameters() if p.requires_grad) 
+    def num_free_parameters(self):
+        last_layer_weight = self.parameters()[-2]
+        return self.num_parameters() - (last_layer_weight.size(1) + 1)
+    
+    def free_parameters(self,parameters=None):
+        if(parameters is None):
+            free_parameters = self.parameters()
+        else:
+            free_parameters = list(parameters)
+        free_parameters[-2] = free_parameters[-2][:-1,]
+        free_parameters[-1] = free_parameters[-1][:-1]
+        return free_parameters
         
     def loss(self,output,target):        
         loss = self.criterion(output, target)
@@ -41,23 +54,21 @@ class modelWrapper:
         acc = get_acc(output,target,topk=topk)
         return acc
     
-    def gen_optimizer(self,optimizer_name,param,optimizer_dict):
-        if(optimizer_name=='SGD'):
-            opt = torch.optim.SGD(param,optimizer_dict['lr'],optimizer_dict['momentum'],optimizer_dict['dampening'],
+    def set_optimizer(self):
+        param = self.model.parameters()
+        optimizer_dict = self.optimizer_param
+        if(self.optimizer_name=='SGD'):
+            self.optimizer = torch.optim.SGD(param,optimizer_dict['lr'],optimizer_dict['momentum'],optimizer_dict['dampening'],
             optimizer_dict['weight_decay'],optimizer_dict['nesterov'])
         elif(self.optimizer_name=='Adam'):
-            opt = torch.optim.Adam(param,optimizer_dict['lr'],optimizer_dict['betas'],optimizer_dict['eps'],
+            self.optimizer = torch.optim.Adam(param,optimizer_dict['lr'],optimizer_dict['betas'],optimizer_dict['eps'],
             optimizer_dict['weight_decay'],optimizer_dict['amsgrad'])
         elif(self.optimizer_name=='LBFGS'):
-            opt = torch.optim.LBFGS(param,optimizer_dict['lr'],optimizer_dict['max_iter'],optimizer_dict['max_eval'],
+            self.optimizer = torch.optim.LBFGS(param,optimizer_dict['lr'],optimizer_dict['max_iter'],optimizer_dict['max_eval'],
             optimizer_dict['tolerance_grad'],optimizer_dict['tolerance_change'],optimizer_dict['history_size'],optimizer_dict['line_search_fn'])
         else:
             print('Optimizer not supported')
             exit()
-        return opt
-        
-    def wrap(self):
-        self.optimizer = self.gen_optimizer(self.optimizer_name,self.model.parameters(),self.optimizer_param)
         return
     
     

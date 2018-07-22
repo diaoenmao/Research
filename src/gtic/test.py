@@ -8,7 +8,7 @@ from torch.distributions.normal import Normal
 from sklearn.datasets import load_boston
 from torch import nn
 import torch.nn.functional as F
-
+import models
 
 # X, y = fetch_data_mld()
 # valid_target = np.array([5])
@@ -266,8 +266,42 @@ import torch.nn.functional as F
         # output = model.forward(input).squeeze()
         # loss = criterion(output, target)
         # print('epoch: {}, loss: {}'.format(epoch,loss.item()))
+# Fixing random state for reproducibility
+# np.random.seed(19680801)
 
 
+# plt.subplot(211)
+# plt.imshow(np.random.random((100, 100)), cmap=plt.cm.BuPu_r)
+# plt.subplot(212)
+# plt.imshow(np.random.random((100, 100)), cmap=plt.cm.BuPu_r)
+
+# plt.subplots_adjust(bottom=0.1, right=0.8, top=0.9)
+# cax = plt.axes([0.85, 0.1, 0.075, 0.8])
+# plt.colorbar(cax=cax)
+# plt.show()
 
 
+# model = models.mnist.conv()
+# for p in model.parameters():
+    # print(p.size())
+    
+    
+    
+    
+# g_1 = torch.randn(10,5)
+# J_1 = torch.matmul(g_1.t(),g_1)
 
+# g_2 = g_1.unsqueeze(2)
+# J_2_nosum = torch.matmul(g_2,g_2.transpose(1,2))
+# J_2 = torch.sum(J_2_nosum,dim=0)
+
+# print(J_1)
+# print(J_2)
+
+# a = torch.randn(10,5)
+# b = a.reshape(-1)
+# print(b.size())
+
+a = torch.randn(10,5)
+b = torch.argmin(a,dim=1)
+print(b.size())

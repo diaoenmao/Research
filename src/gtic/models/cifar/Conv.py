@@ -1,7 +1,6 @@
 import torch
 import numpy as np
 from torch import nn
-from Organic import *
 
 def passthrough(x, **kwargs):
     return x
