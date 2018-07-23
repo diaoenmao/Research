@@ -8,6 +8,6 @@ def init():
         'batch_size': 30,
         'data_size': 50000,
         'device': 'cpu',
-        'max_num_epochs': 3,
+        'max_num_epochs': 2,
         'save_mode': 2,
     }

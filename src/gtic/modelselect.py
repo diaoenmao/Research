@@ -16,7 +16,7 @@ def penalize(irreduced_loss,mw,mode,TAG):
     elif(mode=='GTIC'):
         penalty = GTIC(irreduced_loss,mw)
         penalized_loss = reduced_loss + penalty
-    print(penalty*irreduced_loss.size(0))
+
     return penalized_loss
     
 def vectorize_parameters(param):
