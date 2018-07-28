@@ -63,9 +63,9 @@ def fetch_dataset(data_name):
             transforms.Normalize(mean, std)
         ])
         train_dataset = datasets.CIFAR10(root=train_dir, train=True, download=True, transform=transform_train)
-        train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=2, pin_memory=True)
+        train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=2)
         test_dataset = datasets.CIFAR10(root=test_dir, train=False, download=True, transform=transform_test)
-        test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers=2, pin_memory=True)
+        test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers=2)
         
     elif(data_name=='Imagenet-12'):
         train_dir = './data/{}/train/'.format(data_name)
