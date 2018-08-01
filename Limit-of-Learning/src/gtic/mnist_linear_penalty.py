@@ -16,7 +16,8 @@ model_dir = 'mnist'
 model_name = 'linear'
 modelselect = 'penalty'
 model_id = [9,10]
-data_size = [5000]
+data_size = [10000]
+milestones = [150]
 modelselect_mode = ['AIC','BIC','GTIC']
 metric = ['penalized_loss','modelselect_loss','modelselect_acc','modelselect_id','efficiency','timing']
 TAG = data_name+'_'+model_name+'_'+modelselect
@@ -25,7 +26,7 @@ device = torch.device(config.PARAM['device'])
 max_num_epochs = config.PARAM['max_num_epochs']
 save_mode = config.PARAM['save_mode']
 init_seed = 0
-num_Experiments = 1
+num_Experiments = 2
 seeds = list(range(init_seed,init_seed+num_Experiments))
 input_feature = (28,28)
 output_feature = 10
@@ -33,9 +34,10 @@ input_feature_idx = modelselect_input_feature(input_feature,init_size=2,step_siz
 #model_id = list(range(len(input_feature_idx))
 
 def main():
-    result = []
-    for i in range(len(seeds)):
-        result.append(runExperiment('{}_{}'.format(seeds[i],TAG)))
+    for i in range(num_Experiments):
+        print('Experiment: {}'.format(seeds[i]))
+        runExperiment('{}_{}'.format(seeds[i],TAG))
+    result = loadResult()
     processResult(result,TAG)
     return
     
@@ -51,13 +53,34 @@ def runExperiment(Experiment_TAG):
     bestmodel_id = torch.zeros(len(data_size),device=device)
     timing = {mode: torch.zeros((len(data_size),len(model_id)),device=device) for mode in modelselect_mode}    
     for i in range(len(data_size)):
+        print('data size: {}'.format(data_size[i]))
         train_dataset,test_dataset = fetch_dataset(data_name=data_name)
-        train_loader,test_loader = split_dataset(train_dataset,test_dataset,data_size[i],0,0)
         
         for j in range(len(model_id)):
+            print('model id: {}'.format(model_id[j]))
             cur_Experiment_TAG = Experiment_TAG+'_'+str(data_size[i])+'_'+str(model_id[j])
             cur_input_feature_idx = input_feature_idx[model_id[j]]
 
+            train_loader,validation_loader = split_dataset(train_dataset,test_dataset,data_size[i],0,1)
+            model = eval('models.{}.{}(input_feature={},output_feature={}).to(device)'.format(model_dir,model_name,cur_input_feature_idx.shape[0],output_feature))
+            criterion = nn.CrossEntropyLoss().to(device)
+            mw = modelWrapper(model,config.PARAM['optimizer_name'])
+            mw.set_optimizer_param(config.PARAM['optimizer_param'])
+            mw.set_criterion(criterion)
+            mw.set_optimizer()
+            
+            hyper_test_acc = torch.zeros(max_num_epochs,device=device)
+            scheduler = MultiStepLR(mw.optimizer, milestones=milestones, gamma=0.1)
+            for epoch in range(max_num_epochs):
+                scheduler.step()
+                train_result = train(train_loader[0],mw,cur_input_feature_idx)
+                test_result = test(validation_loader[0],mw,cur_input_feature_idx)
+                print_result(epoch,train_result,test_result)
+                hyper_test_acc[epoch] = test_result[3].avg
+            validated_num_epochs = torch.argmax(hyper_test_acc) + 1
+            print('Validated Number of Epoch: {}'.format(validated_num_epochs))
+            
+            train_loader,test_loader = split_dataset(train_dataset,test_dataset,data_size[i],0,0)
             model = eval('models.{}.{}(input_feature={},output_feature={}).to(device)'.format(model_dir,model_name,cur_input_feature_idx.shape[0],output_feature))
             criterion = nn.CrossEntropyLoss().to(device)
             mw = modelWrapper(model,config.PARAM['optimizer_name'])
@@ -65,8 +88,8 @@ def runExperiment(Experiment_TAG):
             mw.set_criterion(criterion)
             mw.set_optimizer()
                 
-            scheduler = MultiStepLR(mw.optimizer, milestones=[150], gamma=0.1)
-            for epoch in range(max_num_epochs):
+            scheduler = MultiStepLR(mw.optimizer, milestones=milestones, gamma=0.1)
+            for epoch in range(validated_num_epochs):
                 scheduler.step()
                 train_result = train(train_loader,mw,cur_input_feature_idx)
                 test_result = test(test_loader,mw,cur_input_feature_idx)
@@ -79,7 +102,7 @@ def runExperiment(Experiment_TAG):
             
             s1 = time.time()
             irreduced_loss = torch.Tensor().to(device)
-            mw.criterion.reduce = False
+            mw.criterion.reduction = 'none'
             for _, (input, target) in enumerate(train_loader):
                 input, target = input.to(device), target.to(device)
                 input = input.view(input.size(0),-1)[:,cur_input_feature_idx]
@@ -152,7 +175,14 @@ def test(validation_loader,mw,input_feature_idx):
     return batch_time,data_time,losses,top1,top5
 
 
+def loadResult():
+    result = []
+    for i in range(num_Experiments):
+        result.append(load('./output/result/{}_{}.pkl'.format(seeds[i],TAG)))
+    return result
+    
 def processResult(result,TAG):
+    print(result)
     raw_result = np.zeros((num_Experiments,len(metric),len(modelselect_mode),len(data_size)))
     stat_result = {'Mean':{'penalized_loss':{mode: np.zeros(len(data_size)) for mode in modelselect_mode},
                         'modelselect_loss':{mode: np.zeros(len(data_size)) for mode in modelselect_mode},
@@ -165,32 +195,31 @@ def processResult(result,TAG):
                         'modelselect_acc':{mode: np.zeros(len(data_size)) for mode in modelselect_mode},
                         'modelselect_id':{mode: np.zeros(len(data_size)) for mode in modelselect_mode},
                         'efficiency':{mode: np.zeros(len(data_size)) for mode in modelselect_mode},
-                        'timing':{mode: np.zeros(len(data_size)) for mode in modelselect_mode}}}                 
+                        'timing':{mode: np.zeros(len(data_size)) for mode in modelselect_mode}}}                        
     for i in range(num_Experiments):
         for j in range(len(metric)):
             for p in range(len(modelselect_mode)):
                 if(metric[j]=='modelselect_id'):
-                    raw_result[i,j,p,:] = result[i][metric[j]][modelselect_mode[p]].detach().int().numpy()
+                    raw_result[i,j,p,:] = result[i][metric[j]][modelselect_mode[p]].detach().int().cpu().numpy()
                 else:               
                     for q in range(len(data_size)):
-                        modelselect_id = result[i]['modelselect_id'][modelselect_mode[p]][q].detach().int().numpy()
+                        modelselect_id = result[i]['modelselect_id'][modelselect_mode[p]][q].detach().int().cpu().numpy()
                         if(metric[j]=='penalized_loss'):
-                            raw_result[i,j,p,q] = result[i]['penalized_loss'][modelselect_mode[p]][q,modelselect_id].detach().numpy()
+                            raw_result[i,j,p,q] = result[i]['penalized_loss'][modelselect_mode[p]][q,modelselect_id].detach().cpu().numpy()
                         if(metric[j]=='modelselect_loss'): 
-                            raw_result[i,j,p,q] = result[i]['test_loss'][q,modelselect_id].detach().numpy()
+                            raw_result[i,j,p,q] = result[i]['test_loss'][q,modelselect_id].detach().cpu().numpy()
                         elif(metric[j]=='modelselect_acc'): 
-                            raw_result[i,j,p,q] = result[i]['test_acc'][q,modelselect_id].detach().numpy()
+                            raw_result[i,j,p,q] = result[i]['test_acc'][q,modelselect_id].detach().cpu().numpy()
                         elif(metric[j]=='efficiency'):
-                            bestmodel_id = result[i]['bestmodel_id'][q].detach().int().numpy()
-                            raw_result[i,j,p,q] = result[i]['test_loss'][q,bestmodel_id].detach().numpy()/result[i]['test_loss'][q,modelselect_id].detach().numpy()  
+                            bestmodel_id = result[i]['bestmodel_id'][q].detach().int().cpu().numpy()
+                            raw_result[i,j,p,q] = result[i]['test_loss'][q,bestmodel_id].detach().cpu().numpy()/result[i]['test_loss'][q,modelselect_id].detach().cpu().numpy()
                         elif(metric[j]=='timing'):
-                            raw_result[i,j,p,q] = torch.sum(result[i]['timing'][modelselect_mode[p]][q,:]).detach().numpy()
+                            raw_result[i,j,p,q] = torch.sum(result[i]['timing'][modelselect_mode[p]][q,:]).detach().cpu().numpy()
     for j in range(len(metric)):               
         for p in range(len(modelselect_mode)):     
             stat_result['Mean'][metric[j]][modelselect_mode[p]] = np.mean(raw_result[:,j,p,:],axis=0)
             for q in range(len(data_size)):
                 stat_result['Stderr'][metric[j]][modelselect_mode[p]][q] = np.std(raw_result[:,j,p,q],axis=0)/np.sqrt(num_Experiments)
-    print(result)
     print(stat_result)
     all_result = {'raw_result':raw_result,'stat_result':stat_result}
     save(all_result,'./output/result/{}.pkl'.format(TAG))

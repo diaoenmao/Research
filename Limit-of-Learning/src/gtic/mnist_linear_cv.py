@@ -16,8 +16,9 @@ model_dir = 'mnist'
 model_name = 'linear'
 modelselect = 'cv'
 model_id = [9,10]
-data_size = [5000]
-num_fold = [1]
+data_size = [5000,10000]
+num_fold = [1,3]
+milestones = [150]
 metric = ['crossvalidation_loss','modelselect_loss','modelselect_acc','modelselect_id','efficiency','timing']
 TAG = data_name+'_'+model_name+'_'+modelselect
 config.init()
@@ -30,13 +31,14 @@ seeds = list(range(init_seed,init_seed+num_Experiments))
 input_feature = (28,28)
 output_feature = 10
 input_feature_idx = modelselect_input_feature(input_feature,init_size=3,step_size=2,start_point=0)
-#model_id = list(range(len(input_feature_idx))
+#model_id = list(range(len(input_feature_idx)))
 
 
 def main():
-    result = []
-    for i in range(len(seeds)):
-        result.append(runExperiment('{}_{}'.format(seeds[i],TAG)))
+    for i in range(num_Experiments):
+        print('Experiment: {}'.format(seeds[i]))
+        runExperiment('{}_{}'.format(seeds[i],TAG))
+    result = loadResult()
     processResult(result,TAG)
     return
     
@@ -52,11 +54,15 @@ def runExperiment(Experiment_TAG):
     bestmodel_id = torch.zeros(len(data_size),device=device)
     timing = {str(n): torch.zeros((len(data_size),len(model_id)),device=device) for n in num_fold}
     for i in range(len(data_size)):
+        print('data size: {}'.format(data_size[i]))
         train_dataset,test_dataset = fetch_dataset(data_name=data_name)
+        
         for j in range(len(model_id)):
+            print('model id: {}'.format(model_id[j]))
             cur_Experiment_TAG = Experiment_TAG+'_'+str(data_size[i])+'_'+str(model_id[j])
             cur_input_feature_idx = input_feature_idx[model_id[j]]
 
+            train_loader,validation_loader = split_dataset(train_dataset,test_dataset,data_size[i],0,1)
             model = eval('models.{}.{}(input_feature={},output_feature={}).to(device)'.format(model_dir,model_name,cur_input_feature_idx.shape[0],output_feature))
             criterion = nn.CrossEntropyLoss().to(device)
             mw = modelWrapper(model,config.PARAM['optimizer_name'])
@@ -64,9 +70,27 @@ def runExperiment(Experiment_TAG):
             mw.set_criterion(criterion)
             mw.set_optimizer()
             
-            train_loader,test_loader = split_dataset(train_dataset,test_dataset,data_size[i],0,0)        
-            scheduler = MultiStepLR(mw.optimizer, milestones=[150], gamma=0.1)
+            hyper_test_acc = torch.zeros(max_num_epochs,device=device)
+            scheduler = MultiStepLR(mw.optimizer, milestones=milestones, gamma=0.1)
             for epoch in range(max_num_epochs):
+                scheduler.step()
+                train_result = train(train_loader[0],mw,cur_input_feature_idx)
+                test_result = test(validation_loader[0],mw,cur_input_feature_idx)
+                print_result(epoch,train_result,test_result)
+                hyper_test_acc[epoch] = test_result[3].avg
+            validated_num_epochs = torch.argmax(hyper_test_acc) + 1
+            print('Validated Number of Epoch: {}'.format(validated_num_epochs))
+
+            train_loader,test_loader = split_dataset(train_dataset,test_dataset,data_size[i],0,0)
+            model = eval('models.{}.{}(input_feature={},output_feature={}).to(device)'.format(model_dir,model_name,cur_input_feature_idx.shape[0],output_feature))
+            criterion = nn.CrossEntropyLoss().to(device)
+            mw = modelWrapper(model,config.PARAM['optimizer_name'])
+            mw.set_optimizer_param(config.PARAM['optimizer_param'])
+            mw.set_criterion(criterion)
+            mw.set_optimizer()
+                    
+            scheduler = MultiStepLR(mw.optimizer, milestones=milestones, gamma=0.1)
+            for epoch in range(validated_num_epochs):
                 scheduler.step()
                 train_result = train(train_loader,mw,cur_input_feature_idx)
                 test_result = test(test_loader,mw,cur_input_feature_idx)
@@ -87,8 +111,8 @@ def runExperiment(Experiment_TAG):
                     mw.set_criterion(criterion)
                     mw.set_optimizer()
                         
-                    scheduler = MultiStepLR(mw.optimizer, milestones=[150], gamma=0.1)
-                    for epoch in range(max_num_epochs):
+                    scheduler = MultiStepLR(mw.optimizer, milestones=milestones, gamma=0.1)
+                    for epoch in range(validated_num_epochs):
                         scheduler.step()
                         train_result = train(train_loader[c],mw,cur_input_feature_idx)
                         validation_result = test(validation_loader[c],mw,cur_input_feature_idx)                
@@ -156,8 +180,15 @@ def test(validation_loader,mw,input_feature_idx):
     return batch_time,data_time,losses,top1,top5
 
 
+def loadResult():
+    result = []
+    for i in range(num_Experiments):
+        result.append(load('./output/result/{}_{}.pkl'.format(seeds[i],TAG)))
+    return result
+    
 def processResult(result,TAG):
-    raw_result = np.zeros((num_Experiments,len(metric),len(num_fold),len(data_size)),device=device)
+    print(result)
+    raw_result = np.zeros((num_Experiments,len(metric),len(num_fold),len(data_size)))
     stat_result = {'Mean':{'crossvalidation_loss':{str(n): np.zeros(len(data_size)) for n in num_fold},
                         'modelselect_loss':{str(n): np.zeros(len(data_size)) for n in num_fold},
                         'modelselect_acc':{str(n): np.zeros(len(data_size)) for n in num_fold},
@@ -174,27 +205,26 @@ def processResult(result,TAG):
         for j in range(len(metric)):
             for p in range(len(num_fold)):
                 if(metric[j]=='modelselect_id'):
-                    raw_result[i,j,p,:] = result[i][metric[j]][str(num_fold[p])].detach().int().numpy()
+                    raw_result[i,j,p,:] = result[i][metric[j]][str(num_fold[p])].detach().int().cpu().numpy()
                 else:               
                     for q in range(len(data_size)):
-                        modelselect_id = result[i]['modelselect_id'][str(num_fold[p])][q].detach().int().numpy()
+                        modelselect_id = result[i]['modelselect_id'][str(num_fold[p])][q].detach().int().cpu().numpy()
                         if(metric[j]=='crossvalidation_loss'):
-                            raw_result[i,j,p,q] = result[i]['crossvalidation_loss'][str(num_fold[p])][q,modelselect_id].detach().numpy()
+                            raw_result[i,j,p,q] = result[i]['crossvalidation_loss'][str(num_fold[p])][q,modelselect_id].detach().cpu().numpy()
                         if(metric[j]=='modelselect_loss'): 
-                            raw_result[i,j,p,q] = result[i]['test_loss'][q,modelselect_id].detach().numpy()
+                            raw_result[i,j,p,q] = result[i]['test_loss'][q,modelselect_id].detach().cpu().numpy()
                         elif(metric[j]=='modelselect_acc'): 
-                            raw_result[i,j,p,q] = result[i]['test_acc'][q,modelselect_id].detach().numpy()
+                            raw_result[i,j,p,q] = result[i]['test_acc'][q,modelselect_id].detach().cpu().numpy()
                         elif(metric[j]=='efficiency'):
-                            bestmodel_id = result[i]['bestmodel_id'][q].detach().int().numpy()
-                            raw_result[i,j,p,q] = result[i]['test_loss'][q,bestmodel_id].detach().numpy()/result[i]['test_loss'][q,modelselect_id].detach().numpy()
+                            bestmodel_id = result[i]['bestmodel_id'][q].detach().int().cpu().numpy()
+                            raw_result[i,j,p,q] = result[i]['test_loss'][q,bestmodel_id].detach().cpu().numpy()/result[i]['test_loss'][q,modelselect_id].detach().cpu().numpy()
                         elif(metric[j]=='timing'):
-                            raw_result[i,j,p,q] = torch.sum(result[i]['timing'][str(num_fold[p])][q,:]).detach().numpy()
+                            raw_result[i,j,p,q] = torch.sum(result[i]['timing'][str(num_fold[p])][q,:]).detach().cpu().numpy()
     for j in range(len(metric)):               
         for p in range(len(num_fold)):     
             stat_result['Mean'][metric[j]][str(num_fold[p])] = np.mean(raw_result[:,j,p,:],axis=0)
             for q in range(len(data_size)):
                 stat_result['Stderr'][metric[j]][str(num_fold[p])][q] = np.std(raw_result[:,j,p,q],axis=0)/np.sqrt(num_Experiments)
-    print(result)
     print(raw_result)
     print(stat_result)
     all_result = {'raw_result':raw_result,'stat_result':stat_result}

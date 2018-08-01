@@ -18,6 +18,7 @@ modelselect = 'cv'
 model_id = [21,22]
 data_size = [200,300]
 num_fold = [1,3]
+milestones = [150]
 metric = ['crossvalidation_loss','modelselect_loss','modelselect_acc','modelselect_id','efficiency','timing']
 TAG = data_name+'_'+model_name+'_'+modelselect
 config.init()
@@ -34,9 +35,10 @@ input_feature_idx = modelselect_input_feature(input_feature,init_size=3,step_siz
 
 
 def main():
-    result = []
-    for i in range(len(seeds)):
-        result.append(runExperiment('{}_{}'.format(seeds[i],TAG)))
+    for i in range(num_Experiments):
+        print('Experiment: {}'.format(seeds[i]))
+        runExperiment('{}_{}'.format(seeds[i],TAG))
+    result = loadResult()
     processResult(result,TAG)
     return
     
@@ -53,8 +55,11 @@ def runExperiment(Experiment_TAG):
     bestmodel_id = torch.zeros(len(data_size),device=device)
     timing = {str(n): torch.zeros((len(data_size),len(model_id)),device=device) for n in num_fold}
     for i in range(len(data_size)):
+        print('data size: {}'.format(data_size[i]))
         train_dataset,test_dataset = fetch_dataset_synth(input_feature*2,output_feature,randomGen=randomGen)
+        
         for j in range(len(model_id)):
+            print('model id: {}'.format(model_id[j]))
             cur_Experiment_TAG = Experiment_TAG+'_'+str(data_size[i])+'_'+str(model_id[j])
             cur_input_feature_idx = input_feature_idx[model_id[j]]
 
@@ -66,7 +71,7 @@ def runExperiment(Experiment_TAG):
             mw.set_optimizer()
             
             train_loader,test_loader = split_dataset(train_dataset,test_dataset,data_size[i],0,0)        
-            scheduler = MultiStepLR(mw.optimizer, milestones=[150], gamma=0.1)
+            scheduler = MultiStepLR(mw.optimizer, milestones=milestones, gamma=0.1)
             for epoch in range(max_num_epochs):
                 scheduler.step()
                 train_result = train(train_loader,mw,cur_input_feature_idx)
@@ -89,7 +94,7 @@ def runExperiment(Experiment_TAG):
                     mw.set_criterion(criterion)
                     mw.set_optimizer()
                         
-                    scheduler = MultiStepLR(mw.optimizer, milestones=[150], gamma=0.1)
+                    scheduler = MultiStepLR(mw.optimizer, milestones=milestones, gamma=0.1)
                     for epoch in range(max_num_epochs):
                         scheduler.step()
                         train_result = train(train_loader[c],mw,cur_input_feature_idx)
@@ -157,8 +162,14 @@ def test(validation_loader,mw,input_feature_idx):
             end = time.time()              
     return batch_time,data_time,losses,top1,top5
 
-
+def loadResult():
+    result = []
+    for i in range(num_Experiments):
+        result.append(load('./output/result/{}_{}.pkl'.format(seeds[i],TAG)))
+    return result
+    
 def processResult(result,TAG):
+    print(result)
     raw_result = np.zeros((num_Experiments,len(metric),len(num_fold),len(data_size)))
     stat_result = {'Mean':{'crossvalidation_loss':{str(n): np.zeros(len(data_size)) for n in num_fold},
                         'modelselect_loss':{str(n): np.zeros(len(data_size)) for n in num_fold},
@@ -176,27 +187,26 @@ def processResult(result,TAG):
         for j in range(len(metric)):
             for p in range(len(num_fold)):
                 if(metric[j]=='modelselect_id'):
-                    raw_result[i,j,p,:] = result[i][metric[j]][str(num_fold[p])].detach().int().numpy()
+                    raw_result[i,j,p,:] = result[i][metric[j]][str(num_fold[p])].detach().int().cpu().numpy()
                 else:               
                     for q in range(len(data_size)):
-                        modelselect_id = result[i]['modelselect_id'][str(num_fold[p])][q].detach().int().numpy()
+                        modelselect_id = result[i]['modelselect_id'][str(num_fold[p])][q].detach().int().cpu().numpy()
                         if(metric[j]=='crossvalidation_loss'):
-                            raw_result[i,j,p,q] = result[i]['crossvalidation_loss'][str(num_fold[p])][q,modelselect_id].detach().numpy()
+                            raw_result[i,j,p,q] = result[i]['crossvalidation_loss'][str(num_fold[p])][q,modelselect_id].detach().cpu().numpy()
                         if(metric[j]=='modelselect_loss'): 
-                            raw_result[i,j,p,q] = result[i]['test_loss'][q,modelselect_id].detach().numpy()
+                            raw_result[i,j,p,q] = result[i]['test_loss'][q,modelselect_id].detach().cpu().numpy()
                         elif(metric[j]=='modelselect_acc'): 
-                            raw_result[i,j,p,q] = result[i]['test_acc'][q,modelselect_id].detach().numpy()
+                            raw_result[i,j,p,q] = result[i]['test_acc'][q,modelselect_id].detach().cpu().numpy()
                         elif(metric[j]=='efficiency'):
-                            bestmodel_id = result[i]['bestmodel_id'][q].detach().int().numpy()
-                            raw_result[i,j,p,q] = result[i]['test_loss'][q,bestmodel_id].detach().numpy()/result[i]['test_loss'][q,modelselect_id].detach().numpy()
+                            bestmodel_id = result[i]['bestmodel_id'][q].detach().int().cpu().numpy()
+                            raw_result[i,j,p,q] = result[i]['test_loss'][q,bestmodel_id].detach().cpu().numpy()/result[i]['test_loss'][q,modelselect_id].detach().cpu().numpy()
                         elif(metric[j]=='timing'):
-                            raw_result[i,j,p,q] = torch.sum(result[i]['timing'][str(num_fold[p])][q,:]).detach().numpy()
+                            raw_result[i,j,p,q] = torch.sum(result[i]['timing'][str(num_fold[p])][q,:]).detach().cpu().numpy()
     for j in range(len(metric)):               
         for p in range(len(num_fold)):     
             stat_result['Mean'][metric[j]][str(num_fold[p])] = np.mean(raw_result[:,j,p,:],axis=0)
             for q in range(len(data_size)):
                 stat_result['Stderr'][metric[j]][str(num_fold[p])][q] = np.std(raw_result[:,j,p,q],axis=0)/np.sqrt(num_Experiments)
-    print(result)
     print(raw_result)
     print(stat_result)
     all_result = {'raw_result':raw_result,'stat_result':stat_result}

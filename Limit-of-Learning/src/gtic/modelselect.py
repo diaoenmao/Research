@@ -14,10 +14,9 @@ def penalize(irreduced_loss,mw,mode,TAG):
         penalty = BIC(irreduced_loss.size(0),mw)
         penalized_loss = reduced_loss + penalty
     elif(mode=='GTIC'):
-        penalty = GTIC(irreduced_loss,mw)
+        penalty = GTIC_new(irreduced_loss,mw)
         penalized_loss = reduced_loss + penalty
-
-    return penalized_loss
+    return penalized_loss.detach()
     
 def vectorize_parameters(param):
     vec_params = []
@@ -42,11 +41,11 @@ def GTIC(irreduced_loss,mw):
     num_free_parameters = mw.num_free_parameters()
     irreduced_grad_free_parameters = torch.zeros((dataSize,num_free_parameters),device=device)  
     for i in range(int(dataSize)):
-        cur_grad_parameters = torch.autograd.grad(irreduced_likelihood[i], mw.parameters(), create_graph=True, only_inputs=True)
+        cur_grad_parameters = torch.autograd.grad(irreduced_likelihood[i], mw.parameters(), retain_graph=True, only_inputs=True)
         cur_grad_free_parameters = mw.free_parameters(cur_grad_parameters)
         irreduced_grad_free_parameters[i,:] = vectorize_parameters(cur_grad_free_parameters)     
     J = torch.matmul(irreduced_grad_free_parameters.t(),irreduced_grad_free_parameters)/dataSize
-    J = J + torch.eye(num_free_parameters)*1e-5
+    J = J + torch.eye(num_free_parameters,device=device)*1e-5
     # Eigenvalues = torch.eig(J)[0][:,0]
     # print(torch.min(Eigenvalues))
     likelihood = torch.mean(irreduced_likelihood)
@@ -60,7 +59,7 @@ def GTIC(irreduced_loss,mw):
         H[i,:] = vectorize_parameters(cur_grad2_free_parameters)
     V = -H
     try:
-        inv_V = torch.inverse(V+torch.eye(num_free_parameters)*1e-5)
+        inv_V = torch.inverse(V+torch.eye(num_free_parameters,device=device)*1e-5)
         #inv_V = torch.inverse(V)
     except RuntimeError as e:
         print(e)
@@ -70,7 +69,47 @@ def GTIC(irreduced_loss,mw):
     tVMJ = torch.trace(VmJ)
     out = tVMJ/dataSize
     return out
-    
+
+def GTIC_new(irreduced_loss,mw):
+    irreduced_likelihood = -irreduced_loss
+    num_free_parameters = mw.num_free_parameters()
+    J = get_J(irreduced_likelihood,num_free_parameters,mw)
+    H = get_H(irreduced_likelihood,num_free_parameters,mw)
+    V = -H
+    try:
+        inv_V = torch.inverse(V+torch.eye(num_free_parameters,device=device)*1e-5)
+    except RuntimeError as e:
+        print(e)
+        print('ill-conditioned V')
+        return AIC(irreduced_loss.size(0),mw)
+    VmJ = torch.matmul(inv_V,J)
+    tVMJ = torch.trace(VmJ)
+    out = tVMJ/irreduced_loss.size(0)
+    return out
+   
+def get_J(irreduced_likelihood,num_free_parameters,mw):
+    dataSize = irreduced_likelihood.size(0)
+    irreduced_grad_free_parameters = torch.zeros((dataSize,num_free_parameters),device=device)
+    for i in range(int(dataSize)):
+        cur_grad_parameters = torch.autograd.grad(irreduced_likelihood[i], mw.parameters(), retain_graph=True, only_inputs=True)
+        cur_grad_free_parameters = mw.free_parameters(cur_grad_parameters)
+        irreduced_grad_free_parameters[i,:] = vectorize_parameters(cur_grad_free_parameters)     
+    J = torch.matmul(irreduced_grad_free_parameters.t(),irreduced_grad_free_parameters)/dataSize
+    J = J + torch.eye(num_free_parameters,device=device)*1e-5
+    return J.detach()
+
+def get_H(irreduced_likelihood,num_free_parameters,mw):
+    likelihood = torch.mean(irreduced_likelihood)
+    grad_parameters = torch.autograd.grad(likelihood, mw.parameters(), create_graph=True, only_inputs=True)
+    grad_free_parameters = mw.free_parameters(grad_parameters)
+    vec_grad_free_parameters = vectorize_parameters(grad_free_parameters)
+    H = torch.zeros((num_free_parameters,num_free_parameters),device=device)
+    for i in range(num_free_parameters):
+        cur_grad2_parameters = torch.autograd.grad(vec_grad_free_parameters[i], mw.parameters(), retain_graph=True, only_inputs=True)
+        cur_grad2_free_parameters = mw.free_parameters(cur_grad2_parameters)
+        H[i,:] = vectorize_parameters(cur_grad2_free_parameters)
+    return H.detach()
+        
 def GTIC_closed(input,output,target,mw):
     with torch.no_grad():
         num_free_parameters = mw.num_free_parameters()
