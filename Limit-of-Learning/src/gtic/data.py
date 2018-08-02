@@ -63,9 +63,7 @@ def fetch_dataset(data_name):
             transforms.Normalize(mean, std)
         ])
         train_dataset = datasets.CIFAR10(root=train_dir, train=True, download=True, transform=transform_train)
-        train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=2)
         test_dataset = datasets.CIFAR10(root=test_dir, train=False, download=True, transform=transform_test)
-        test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers=2)
         
     elif(data_name=='Imagenet-12'):
         train_dir = './data/{}/train/'.format(data_name)
@@ -82,8 +80,7 @@ def fetch_dataset(data_name):
                 transforms.ToTensor(),
                 transforms.Normalize(mean=[0.485, 0.456, 0.406],
                                      std=[0.229, 0.224, 0.225])
-            ]))
-        train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=2, pin_memory=True)      
+            ]))     
         test_dataset = datasets.ImageFolder(
             test_dir,
             transforms.Compose([
@@ -93,7 +90,6 @@ def fetch_dataset(data_name):
                 transforms.Normalize(mean=[0.485, 0.456, 0.406],
                                      std=[0.229, 0.224, 0.225])
             ]))
-        test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers=2, pin_memory=True)
         
     elif(data_name=='SVHN_train' or data_name=='SVHN_extra' or data_name=='SVHN_all'):
         head_data_name,type = data_name.split('_')
@@ -119,9 +115,7 @@ def fetch_dataset(data_name):
                 transforms.Normalize(mean, std)
             ])
             train_dataset = datasets.SVHN(root=train_dir, split='train', download=True, transform=transform_train)
-            train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=2, pin_memory=True)
             test_dataset = datasets.SVHN(root=test_dir, split='test', download=True, transform=transform_test)
-            test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers=2, pin_memory=True)
         elif(type=='extra'):  
             if(os.path.exists(stats_name)):
                 mean,std = load(stats_name)
@@ -138,9 +132,7 @@ def fetch_dataset(data_name):
                 transforms.Normalize(mean, std)
             ])
             train_dataset = datasets.SVHN(root=train_dir, split='extra', download=True, transform=transform_train)
-            train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=2, pin_memory=True)
-            test_dataset = datasets.SVHN(root=test_dir, split='test', download=True, transform=transform_test)
-            test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers=2, pin_memory=True)            
+            test_dataset = datasets.SVHN(root=test_dir, split='test', download=True, transform=transform_test)          
         elif(type=='all'):
             if(os.path.exists(stats_name)):
                 mean,std = load(stats_name)
@@ -161,9 +153,7 @@ def fetch_dataset(data_name):
             train_train_dataset = datasets.SVHN(root=train_dir, split='train', download=True, transform=transform_train)
             extra_train_dataset = datasets.SVHN(root=train_dir, split='extra', download=True, transform=transform_train)
             train_dataset = data_utils.ConcatDataset([train_train_dataset,extra_train_dataset])
-            train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=2, pin_memory=True)
             test_dataset = datasets.SVHN(root=test_dir, split='test', download=True, transform=transform_test)
-            test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers=2, pin_memory=True)
             
     elif(data_name=='EMNIST_byclass' or data_name=='EMNIST_bymerge' or data_name=='EMNIST_balanced' or data_name=='EMNIST_letters' or data_name=='EMNIST_digits' or data_name=='EMNIST_mnist'):
         head_data_name,type = data_name.split('_')
@@ -188,10 +178,8 @@ def fetch_dataset(data_name):
             transforms.ToTensor(),
             transforms.Normalize(mean, std)
         ])
-        train_dataset = datasets.EMNIST(root=train_dir, split=type, train=True, download=True, transform=transform_train)
-        train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=2, pin_memory=True)
-        test_dataset = datasets.EMNIST(root=test_dir, split=type, train=False, download=True, transform=transform_test)
-        test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers=2, pin_memory=True)        
+        train_dataset = datasets.EMNIST(root=train_dir, split=type, train=True, download=True, transform=transform_train)     
+        test_dataset = datasets.EMNIST(root=test_dir, split=type, train=False, download=True, transform=transform_test)     
     return train_dataset,test_dataset
 
 def split_dataset(train_dataset,test_dataset,data_size,batch_size,num_fold,p=0.8):
