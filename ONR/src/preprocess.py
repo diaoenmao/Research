@@ -6,18 +6,12 @@ from util import *
 
 MAX_BUFF_SIZE = 1024*(1024*1024) #1GB
     
-def annotation2label(path,FRAME_COUNT,start=0,delimiter=','):
+def RAI_annotation2label(path,FRAME_COUNT,start=0,delimiter=','):
     annotation = np.genfromtxt(path,dtype=np.int64,delimiter=delimiter)-start
     label = torch.zeros(FRAME_COUNT,dtype=torch.long)
     for i in range(annotation.shape[0]-1):
         label[annotation[i,1]:annotation[i+1,0]+1] = 1
     return label
-
-def filenames_in(dir):
-    filenames_ext = os.listdir(dir)
-    filenames = [filename.rsplit('.',1)[0] for filename in filenames_ext]
-    filenames.sort()
-    return filenames
         
  
 def show_shots_transition(root,video_name):
@@ -29,8 +23,8 @@ def show_shots_transition(root,video_name):
     FRAME_HEIGHT = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
     FPS = cap.get(cv2.CAP_PROP_FPS)
     annotation_name = '{}.txt'.format(video_name.rsplit('.',1)[0])
-    shots = annotation2label('{}/annotations/shots/{}'.format(root,annotation_name),FRAME_COUNT,0,'\t')
-    scenes = annotation2label('{}/annotations/scenes/{}'.format(root,annotation_name),FRAME_COUNT,1,' ')
+    shots = RAI_annotation2label('{}/annotations/shots/{}'.format(root,annotation_name),FRAME_COUNT,0,'\t')
+    scenes = RAI_annotation2label('{}/annotations/scenes/{}'.format(root,annotation_name),FRAME_COUNT,1,' ')
     index = 0
     while (cap.isOpened()):
         ret, frame = cap.read()

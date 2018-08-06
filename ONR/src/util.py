@@ -3,14 +3,13 @@ import time
 import torch
 import itertools
 import os
-import gc
 import sys
-import psutil
 import shutil
 import zipfile
 import numpy as np
 import seaborn as sns
 from matplotlib import pyplot as plt
+from torch import nn
 
 def save(input,dir,protocol = 2,mode='torch'):
     dirname = os.path.dirname(dir)
@@ -33,14 +32,14 @@ def load(dir,mode='torch'):
         error('Not supported save mode')
     return                
 
-def save_model(model, dir = './model/model.pth'):
+def save_model(model, dir):
     dirname = os.path.dirname(dir)
     if not os.path.exists(dirname):
         os.makedirs(dirname, exist_ok=True)
     torch.save(model.state_dict(), dir)
     return
     
-def load_model(model, dir = './model/model.pth'):
+def load_model(model, dir):
     checkpoint = torch.load(dir)
     if isinstance(checkpoint, dict) and 'state_dict' in checkpoint:       
         model.load_state_dict(checkpoint['state_dict'])
@@ -52,19 +51,6 @@ def print_model(model):
     for p in model.parameters():
         print(p)
     return
-
-def zip_dir(paths,zip_name):
-    dirname = os.path.dirname(zip_name)
-    if not os.path.exists(dirname):
-        os.makedirs(dirname, exist_ok=True)
-    zipf = zipfile.ZipFile(zip_name, 'w', zipfile.ZIP_DEFLATED)
-    for i in range(len(paths)):
-        path = paths[i]
-        for root, dirs, files in os.walk(path):
-            for file in files:
-                zipf.write(os.path.relpath(os.path.join(root, file), os.path.join(path, '..')))
-    zipf.close()
-    return
         
 def remove_dir(paths):
     for i in range(len(paths)):
@@ -72,6 +58,16 @@ def remove_dir(paths):
         if os.path.exists(path):
             shutil.rmtree(path)
     return 
+
+def filenames_in(dir,target_ext):
+    filenames_ext = os.listdir(dir)
+    filenames = []
+    for filename_ext in filenames_ext:
+        filename,ext = filename_ext.rsplit('.',1)
+        if(ext == target_ext):
+            filenames.append(filename)
+    filenames.sort()
+    return filenames
     
 def get_correct_cnt(output,target):
     max_index = output.max(dim = 1)[1]  
@@ -166,10 +162,9 @@ class Meter(object):
 def print_result(epoch,train_result,test_result):
     print('Epoch: {0}\t'
         'Loss {losses.avg:.4f}\t'
-        'Prec@1 {prec1.avg:.3f}\t'
-        'Prec@5 {prec5.avg:.3f}\t'
+        'PSNR {psnrs.avg:.4f}\t'
         'Time {time}\t'
-        .format(epoch,losses=test_result[2],prec1=test_result[3],prec5=test_result[4],time=train_result[0].sum))
+        .format(epoch,losses=test_result[2],psnrs=test_result[3],time=train_result[0].sum))
     return
 
 def merge_result(train_result,test_result,new_train_result,new_test_result):
@@ -187,6 +182,23 @@ def p_inverse(A):
     pinv = (A.t().matmul(A)).inverse().matmul(A.t())
     return pinv 
 
+def RGB_to_YCbCr(input):
+    output = input.new_empty(input.size())
+    output[:, 0, :, :] = input[:, 0, :, :] * 0.299 + input[:, 1, :, :] * 0.587 + input[:, 2, :, :] * 0.114
+    output[:, 1, :, :] = input[:, 0, :, :] * (-0.168736) + input[:, 1, :, :] * (-0.331264) + input[:, 2, :, :] * 0.5 + 128
+    output[:, 2, :, :] = input[:, 0, :, :] * 0.5 + input[:, 1, :, :] * (-0.418688) + input[:, 2, :, :] * (-0.081312) + 128
+    output = torch.clamp(output, min=0, max=255).round()
+    return output
+  
+def YCbCr_to_RGB(input):
+    output = input.new_empty(input.size())
+    output[:, 0, :, :] = input[:, 0, :, :] + (input[:, 2, :, :] - 128) * 1.402
+    output[:, 1, :, :] = input[:, 0, :, :] + (input[:, 1, :, :] - 128) * (-0.344136) + (input[:, 2, :, :] - 128) * (-0.714136)
+    output[:, 2, :, :] = input[:, 0, :, :] + (input[:, 1, :, :] - 128) * 1.772
+    output = torch.clamp(output, min=0, max=255).round()
+    return output
+
+# ===================Metric=====================
 def softmax(x):
     """
     Compute the softmax function for each row of the input x.
@@ -220,6 +232,16 @@ def softmax(x):
     
     assert x.shape == orig_shape
     return x
+    
+def PSNR(input,decoded_input):
+    MAX = 255
+    criterion = nn.MSELoss().to(input.device)
+    MSE = criterion(input,decoded_input)
+    psnr = 20*torch.log10(MAX)-10*torch.log10(MSE)
+    return psnr
+    
+def BPP(code,num_pixel):    
+    return 8*code.numel()/num_pixel
     
 # ===================Figure===================== 
 def plt_dist(x):

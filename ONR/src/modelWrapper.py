@@ -17,6 +17,7 @@ class modelWrapper:
         self.criterion = nn.NLLLoss(reduce=False)
         self.regularization = None
         self.active_coordinate = None
+        self.norm1_lagrange = 0.1
         
     def set_optimizer_name(self,optimizer_name):
         self.optimizer_name = optimizer_name
@@ -45,9 +46,9 @@ class modelWrapper:
         free_parameters[-2] = free_parameters[-2][:-1,]
         free_parameters[-1] = free_parameters[-1][:-1]
         return free_parameters
-        
-    def loss(self,output,target):        
-        loss = self.criterion(output, target)
+    
+    def loss(self,input,output):
+        loss = self.criterion(input,output[1]) + norm1_lagrange*output[0].norm(p=1)
         return loss
         
     def acc(self,output,target,topk=(1,)):

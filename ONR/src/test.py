@@ -1,13 +1,16 @@
 import numpy as np
 import cv2
-import base64
+import matplotlib.pyplot as plt
 from util import *
+from torchvision.utils import make_grid
+from util import *
+from data import *
 
-# imagefilename = 'lena.tif'
+# imagefilename = './data/sample/lena.tif'
 # img=cv2.imread(imagefilename, 1)
 # ret,img_encode = cv2.imencode('.jpg', img)
 # binary_img_encode = img_encode.tostring()
-# with open('./sample/lena.jpg', 'wb') as f:
+# with open('./data/sample/lena.jpg', 'wb') as f:
     # f.write(binary_img_encode)
 # with open('./sample/lena.jpg', 'rb') as f:
     # binary_img_encode_r = f.read()
@@ -16,7 +19,7 @@ from util import *
 # print(img_encode_r)
 # assert np.array_equal(img_encode.reshape(-1),img_encode_r)
 
-# path = './sample/input_video.mp4'
+# path = './data/sample/input_video.mp4'
 # cap = cv2.VideoCapture(path)
 # print(cap.isOpened())   # True = read video successfully. False - fail to read video.
 # fourcc = cv2.VideoWriter_fourcc(*'XVID')
@@ -35,4 +38,53 @@ from util import *
 # out.release()
 # cv2.destroyAllWindows()
 
+
+
+
+# N = 10
+# C = 3
+# H = 1023
+# W = 800
+# x = torch.randn(N,C,H,W)
+# print(x.shape)
+# size = (128,190)
+# patches_fold_H = x.unfold(2, size[0], size[0])
+# print(patches_fold_H.shape)
+# if(H % size[0] != 0):
+    # patches_fold_H = torch.cat((patches_fold_H,x[:,:,-size[0]:,].permute(0,1,3,2).unsqueeze(2)),dim=2)
+# print(patches_fold_H.shape)
+# patches_fold_HW = patches_fold_H.unfold(3, size[1], size[1])
+# if(W % size[1] != 0):
+    # patches_fold_HW = torch.cat((patches_fold_HW,patches_fold_H[:,:,:,-size[1]:,:].permute(0,1,2,4,3).unsqueeze(3)),dim=3)
+# print(patches_fold_HW.shape)
+# patches = patches_fold_HW.permute(0,2,3,1,4,5).reshape(-1,C,size[0],size[1])
+# print(patches.shape)
+
+
+# size = (128,128)
+# #size = (500,800)
+# imagefilename = 'data/sample/mountain.png'
+# img_np = cv2.cvtColor(cv2.imread(imagefilename, 1), cv2.COLOR_BGR2RGB)
+# img = torch.from_numpy(img_np).permute(2,0,1).unsqueeze(0)
+# print(img.shape)
+# patches = extract_patches_2D(img,size)
+# print(patches.shape)
+# nrow = int(np.ceil(float(img.size(3))/size[1]))
+# show_patches = make_grid(patches,nrow=nrow).permute(1,2,0).numpy()
+# plt.imshow(show_patches)
+# plt.show()
+
+# size = (128,128)
+# imagefilename = 'data/sample/mountain.png'
+# BGR_img = cv2.imread(imagefilename, 1)
+# YCC_img = cv2.cvtColor(BGR_img, cv2.COLOR_BGR2YCR_CB)
+# my_YCC_img = RGB_to_YCbCr(torch.from_numpy(np.float32(BGR_img)).permute(2,0,1).unsqueeze(0)).squeeze().permute(1,2,0).numpy()
+# assert np.array_equal(YCC_img,my_YCC_img)
+# my_RGB_img = YCbCr_to_RGB(RGB_to_YCbCr(torch.from_numpy(np.float32(BGR_img)).permute(2,0,1).unsqueeze(0))).squeeze().permute(1,2,0).numpy()
+# my_BGR_img = cv2.cvtColor(BGR_img, cv2.COLOR_RGB2BGR)
+# assert np.array_equal(BGR_img,my_BGR_img)
+
+
+# path = './data/ImageNet/train'
+# unzip(path,'tar')
 
