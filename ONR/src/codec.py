@@ -7,7 +7,7 @@ class Codec():
         self.model = model
         self.model.eval()
         self._transform = transforms.Compose([
-                transforms.Lambda(lambda x: RGB_to_YCbCr(x))
+                transforms.Lambda(lambda x: RGB_to_YCbCr(x)),
                 transforms.ToTensor()
             ])     
         self._detransform =  transforms.Compose([

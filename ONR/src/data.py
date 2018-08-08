@@ -66,16 +66,18 @@ def fetch_dataset(data_name):
         
     elif(data_name=='ImageNet'):
         train_dir = './data/{}/train/'.format(data_name)
-        test_dir = './data/{}/valid/'.format(data_name)
+        test_dir = './data/{}/validation/'.format(data_name)
         train_dataset = datasets.ImageFolder(
             train_dir,
             transforms.Compose([
-                transforms.ToTensor(),
-                transforms.RandomHorizontalFlip()])     
+                transforms.RandomHorizontalFlip(),
+                transforms.Lambda(lambda x: RGB_to_YCbCr(x)),
+                transforms.ToTensor()]))     
         test_dataset = datasets.ImageFolder(
             test_dir,
             transforms.Compose([
-                transforms.ToTensor()]))
+            transforms.Lambda(lambda x: RGB_to_YCbCr(x)),
+            transforms.ToTensor()]))
         
     elif(data_name=='SVHN_train' or data_name=='SVHN_extra' or data_name=='SVHN_all'):
         head_data_name,type = data_name.split('_')
@@ -165,7 +167,8 @@ def fetch_dataset(data_name):
             transforms.Normalize(mean, std)
         ])
         train_dataset = datasets.EMNIST(root=train_dir, split=type, train=True, download=True, transform=transform_train)     
-        test_dataset = datasets.EMNIST(root=test_dir, split=type, train=False, download=True, transform=transform_test)     
+        test_dataset = datasets.EMNIST(root=test_dir, split=type, train=False, download=True, transform=transform_test)
+    print('data ready')
     return train_dataset,test_dataset
 
 def split_dataset(train_dataset,test_dataset,data_size,batch_size,num_fold,p=0.8):
@@ -186,11 +189,11 @@ def split_dataset(train_dataset,test_dataset,data_size,batch_size,num_fold,p=0.8
         if(batch_size==0):
             batch_size = len(train_idx)
         train_loader = [torch.utils.data.DataLoader(dataset=train_dataset, 
-                    batch_size=batch_size, sampler=train_sampler, num_workers=2)]   
+                    batch_size=batch_size, pin_memory=True, sampler=train_sampler)]   
         validation_idx = list(set(data_idx) - set(train_idx))
         validation_sampler = SubsetRandomSampler(validation_idx)
         validation_loader = [torch.utils.data.DataLoader(dataset=train_dataset, 
-                    batch_size=1, sampler=validation_sampler, num_workers=2)]
+                    batch_size=1, pin_memory=True, sampler=validation_sampler)]
         return train_loader,validation_loader
     elif(num_fold>1 and num_fold<=len(indices)):
         splitted_idx = np.array_split(data_idx, num_fold)
@@ -289,7 +292,17 @@ def unzip(path,mode='zip'):
     return   
     
 def extract_patches_2D(img,size):
-    patch_H, patch_W = min(img.size(2),size[0]),min(img.size(3),size[1])
+    patch_H, patch_W = size[0], size[1]
+    if(img.size(2)<patch_H):
+        num_padded_H_Top = int(np.ceil((patch_H - img.size(2))/2.0))
+        num_padded_H_Bottom = int(np.floor((patch_H - img.size(2))/2.0))
+        padding_H = nn.ConstantPad2d((0,0,num_padded_H_Top,num_padded_H_Bottom),0)
+        img = padding_H(img)
+    if(img.size(3)<patch_W):
+        num_padded_W_Left = int(np.ceil((patch_W - img.size(3))/2.0))
+        num_padded_W_Right = int(np.floor((patch_W - img.size(3))/2.0))
+        padding_W = nn.ConstantPad2d((num_padded_W_Left,num_padded_W_Right,0,0),0)
+        img = padding_W(img)
     patches_fold_H = img.unfold(2, patch_H, patch_H)
     if(img.size(2) % patch_H != 0):
         patches_fold_H = torch.cat((patches_fold_H,img[:,:,-patch_H:,].permute(0,1,3,2).unsqueeze(2)),dim=2)

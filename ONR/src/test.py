@@ -1,6 +1,7 @@
 import numpy as np
 import cv2
 import matplotlib.pyplot as plt
+import torchvision.transforms as transforms
 from util import *
 from torchvision.utils import make_grid
 from util import *
@@ -88,3 +89,23 @@ from data import *
 # path = './data/ImageNet/train'
 # unzip(path,'tar')
 
+# path = './data/sample/lena.jpg'
+# img = Image.open(path)
+# transform = transforms.Compose([
+                # transforms.RandomHorizontalFlip(),
+                # transforms.Lambda(lambda x: RGB_to_YCbCr(x))])
+# transformed_img = transform(img)
+# copy_image = np.array(transformed_img.copy()) # Make a copy
+# copy_image[:,:,0] = 0
+# copy_image[:,:,1] = 0
+# plt.imshow(copy_image)
+# plt.show()
+
+# path = './data/sample/lena.jpg'
+# img = Image.open(path)
+# transform = transforms.Compose([
+                # transforms.RandomHorizontalFlip(),
+                # transforms.Lambda(lambda x: RGB_to_YCbCr(x)),
+                # transforms.ToTensor()])
+# transformed_img = transform(img)
+# print(transformed_img.size())

@@ -16,7 +16,7 @@ model_name = 'cae'
 milestones = [50,150,250]
 data_size = 50000
 metric = ['PSNR','bpp']
-TAG = data_name+'_'+model_name+'_'+modelselect
+TAG = data_name+'_'+model_name
 config.init()
 device = torch.device(config.PARAM['device'])    
 max_num_epochs = config.PARAM['max_num_epochs']
@@ -70,3 +70,7 @@ def test(validation_loader,codec):
             batch_time.update(time.time() - end)
             end = time.time()              
     return batch_time,data_time,psnrs,bpps
+
+    
+if __name__ == "__main__":
+    main()

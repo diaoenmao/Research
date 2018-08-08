@@ -8,6 +8,8 @@ import shutil
 import zipfile
 import numpy as np
 import seaborn as sns
+import cv2
+from PIL import Image
 from matplotlib import pyplot as plt
 from torch import nn
 
@@ -131,7 +133,34 @@ def gen_hidden_layers(max_num_nodes,init_size=None,step_size=None):
         hidden_layers.extend(list(itertools.product(*num_nodes)))
         del num_nodes[-1]   
     return hidden_layers
- 
+
+def print_result(epoch,train_result,test_result):
+    print('Epoch: {0}\t'
+        'Loss {losses.avg:.4f}\t'
+        'PSNR {psnrs.avg:.4f}\t'
+        'Time {time}\t'
+        .format(epoch,losses=test_result[2],psnrs=test_result[3],time=train_result[0].sum))
+    return
+
+def merge_result(train_result,test_result,new_train_result,new_test_result):
+    if(train_result is None):
+        train_result = list(new_train_result)
+        test_result = list(new_test_result)            
+    else:
+        for i in range(len(train_result)):
+            train_result[i].merge(new_train_result[i])
+            test_result[i].merge(new_test_result[i])
+    return train_result,test_result
+
+def PIL_to_CV2(pil_img):
+    cv2_img = cv2.cvtColor(np.array(pil_img), cv2.COLOR_RGB2BGR)
+    return cv2_img
+    
+def CV2_to_PIL():
+    cv2_img = cv2.cvtColor(cv2_img,cv2.COLOR_BGR2RGB)
+    pil_img = Image.fromarray(cv2_img)
+    return pil_img
+    
 # ===================Object===================== 
 
 class Meter(object):
@@ -158,24 +187,6 @@ class Meter(object):
     def merge(self, meter):
         self.history_val.extend(meter.history_val)
         self.history_avg.extend(meter.history_avg)
-
-def print_result(epoch,train_result,test_result):
-    print('Epoch: {0}\t'
-        'Loss {losses.avg:.4f}\t'
-        'PSNR {psnrs.avg:.4f}\t'
-        'Time {time}\t'
-        .format(epoch,losses=test_result[2],psnrs=test_result[3],time=train_result[0].sum))
-    return
-
-def merge_result(train_result,test_result,new_train_result,new_test_result):
-    if(train_result is None):
-        train_result = list(new_train_result)
-        test_result = list(new_test_result)            
-    else:
-        for i in range(len(train_result)):
-            train_result[i].merge(new_train_result[i])
-            test_result[i].merge(new_test_result[i])
-    return train_result,test_result
     
 # ===================Function===================== 
 def p_inverse(A):
@@ -183,19 +194,11 @@ def p_inverse(A):
     return pinv 
 
 def RGB_to_YCbCr(input):
-    output = input.new_empty(input.size())
-    output[:, 0, :, :] = input[:, 0, :, :] * 0.299 + input[:, 1, :, :] * 0.587 + input[:, 2, :, :] * 0.114
-    output[:, 1, :, :] = input[:, 0, :, :] * (-0.168736) + input[:, 1, :, :] * (-0.331264) + input[:, 2, :, :] * 0.5 + 128
-    output[:, 2, :, :] = input[:, 0, :, :] * 0.5 + input[:, 1, :, :] * (-0.418688) + input[:, 2, :, :] * (-0.081312) + 128
-    output = torch.clamp(output, min=0, max=255).round()
+    output = input.convert('YCbCr')
     return output
   
 def YCbCr_to_RGB(input):
-    output = input.new_empty(input.size())
-    output[:, 0, :, :] = input[:, 0, :, :] + (input[:, 2, :, :] - 128) * 1.402
-    output[:, 1, :, :] = input[:, 0, :, :] + (input[:, 1, :, :] - 128) * (-0.344136) + (input[:, 2, :, :] - 128) * (-0.714136)
-    output[:, 2, :, :] = input[:, 0, :, :] + (input[:, 1, :, :] - 128) * 1.772
-    output = torch.clamp(output, min=0, max=255).round()
+    output = input.convert('RGB')
     return output
 
 # ===================Metric=====================
@@ -234,7 +237,7 @@ def softmax(x):
     return x
     
 def PSNR(input,decoded_input):
-    MAX = 255
+    MAX = torch.tensor(255.0).to(input.device)
     criterion = nn.MSELoss().to(input.device)
     MSE = criterion(input,decoded_input)
     psnr = 20*torch.log10(MAX)-10*torch.log10(MSE)

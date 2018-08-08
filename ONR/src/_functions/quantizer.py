@@ -2,9 +2,15 @@ import torch
 from torch.autograd.function import Function
 
 class Quantizer(Function):
-    def forward(self, input):
-        output = torch.round(input)
+    
+    @staticmethod
+    def forward(ctx, input, inplace):
+        if(inplace):
+            output = input.round_()
+        else:
+            output = torch.round(input)
         return output
 
-    def backward(self, grad_output):
-        return grad_output 
+    @staticmethod
+    def backward(ctx, grad_output):
+        return grad_output, None 
