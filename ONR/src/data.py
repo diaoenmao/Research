@@ -171,20 +171,20 @@ def fetch_dataset(data_name):
     print('data ready')
     return train_dataset,test_dataset
 
-def split_dataset(train_dataset,test_dataset,data_size,batch_size,num_fold,p=0.8):
+def split_dataset(train_dataset,test_dataset,data_size,batch_size,num_fold,radomGen,p=0.8):
     indices = list(range(len(train_dataset)))
-    data_idx = np.random.choice(indices, size=data_size, replace=False)
+    data_idx = radomGen.choice(indices, size=data_size, replace=False)
     if(num_fold==0):
         train_sampler = SubsetRandomSampler(data_idx)
         if(batch_size==0):
             batch_size = data_size
         train_loader = torch.utils.data.DataLoader(dataset=train_dataset, 
-                    batch_size=batch_size, sampler=train_sampler, num_workers=2)    
+                    batch_size=batch_size, pin_memory=True, sampler=train_sampler)    
         test_loader = torch.utils.data.DataLoader(dataset=test_dataset, 
-            batch_size=1, num_workers=2)
+            batch_size=1, pin_memory=True)
         return train_loader,test_loader
     elif(num_fold==1):
-        train_idx = np.random.choice(data_idx, size=int(data_size*p), replace=False)
+        train_idx = radomGen.choice(data_idx, size=int(data_size*p), replace=False)
         train_sampler = SubsetRandomSampler(train_idx)
         if(batch_size==0):
             batch_size = len(train_idx)
@@ -196,6 +196,7 @@ def split_dataset(train_dataset,test_dataset,data_size,batch_size,num_fold,p=0.8
                     batch_size=1, pin_memory=True, sampler=validation_sampler)]
         return train_loader,validation_loader
     elif(num_fold>1 and num_fold<=len(indices)):
+        data_idx = radomGen.permutation(data_idx)
         splitted_idx = np.array_split(data_idx, num_fold)
         train_loader = []
         validation_loader = []
@@ -206,10 +207,10 @@ def split_dataset(train_dataset,test_dataset,data_size,batch_size,num_fold,p=0.8
             if(batch_size==0):
                 batch_size = len(train_idx)
             train_loader.append(torch.utils.data.DataLoader(dataset=train_dataset, 
-                batch_size=batch_size, sampler=train_sampler, num_workers=2)) 
+                batch_size=batch_size, pin_memory=True, sampler=train_sampler)) 
             validation_sampler = SubsetRandomSampler(validation_idx)
             validation_loader.append(torch.utils.data.DataLoader(dataset=train_dataset, 
-                batch_size=1, sampler=validation_sampler, num_workers=2))
+                batch_size=1, pin_memory=True, sampler=validation_sampler))
         return train_loader,validation_loader
     else:
         error("Invalid number of fold")

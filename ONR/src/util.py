@@ -136,10 +136,11 @@ def gen_hidden_layers(max_num_nodes,init_size=None,step_size=None):
 
 def print_result(epoch,train_result,test_result):
     print('Epoch: {0}\t'
+        'Patch Size: {patch_size}\t'
         'Loss {losses.avg:.4f}\t'
         'PSNR {psnrs.avg:.4f}\t'
         'Time {time}\t'
-        .format(epoch,losses=test_result[2],psnrs=test_result[3],time=train_result[0].sum))
+        .format(epoch,patch_size=train_result[2].sum,losses=test_result[2],psnrs=test_result[3],time=train_result[0].sum))
     return
 
 def merge_result(train_result,test_result,new_train_result,new_test_result):
@@ -236,10 +237,10 @@ def softmax(x):
     assert x.shape == orig_shape
     return x
     
-def PSNR(input,decoded_input):
-    MAX = torch.tensor(255.0).to(input.device)
-    criterion = nn.MSELoss().to(input.device)
-    MSE = criterion(input,decoded_input)
+def PSNR(input,decoded_input,max=1.0):
+    MAX = torch.tensor(max).to(input.device)
+    criterion = nn.MSELoss(reduction='sum').to(input.device)
+    MSE = criterion(input,decoded_input)/input.numel()
     psnr = 20*torch.log10(MAX)-10*torch.log10(MSE)
     return psnr
     

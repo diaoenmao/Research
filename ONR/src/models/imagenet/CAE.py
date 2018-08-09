@@ -73,7 +73,7 @@ class DownTransition(nn.Module):
 
     def forward(self, x):
         out = self.convs(x)
-        out += self.fc(x)
+        #out += self.fc(x)
         out = self.downsample(out)
         return out
                 
@@ -99,7 +99,7 @@ class UpTransition(nn.Module):
 
     def forward(self, x):
         out = self.convs(x)
-        out += self.fc(x)
+        #out += self.fc(x)
         out = self.upsample(out)
         return out        
 
@@ -113,7 +113,7 @@ class Quantizer(nn.Module):
     
     
 class CAE(nn.Module):
-    def __init__(self):
+    def __init__(self, init_weights=True):
         super(CAE, self).__init__()
         self.encoder = nn.Sequential(
             DownTransition(3, 16, 1),
@@ -128,6 +128,8 @@ class CAE(nn.Module):
             UpTransition(16, 3, 1)
         )
         self.quantizer = Quantizer()
+        if init_weights:
+                self._initialize_weights()
         
     def code(self, x):
         encoded_x = self.encoder(x)
@@ -137,6 +139,20 @@ class CAE(nn.Module):
     def decode(self, code):
         decode_x = self.decoder(code)
         return decoded_x
+        
+    def _initialize_weights(self):
+        for m in self.modules():
+            if isinstance(m, nn.Conv2d):
+                nn.init.kaiming_normal_(m.weight, mode='fan_out', nonlinearity='relu')
+                if m.bias is not None:
+                    nn.init.constant_(m.bias, 0)
+            elif isinstance(m, nn.BatchNorm2d):
+                nn.init.constant_(m.weight, 1)
+                nn.init.constant_(m.bias, 0)
+            elif isinstance(m, nn.Linear):
+                nn.init.normal_(m.weight, 0, 0.01)
+                nn.init.constant_(m.bias, 0)
+        return
         
     def forward(self, x):
         encoded_x = self.encoder(x)

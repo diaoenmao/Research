@@ -8,6 +8,6 @@ def init():
         'batch_size': 30,
         'data_size': 10000,
         'device': 'cuda',
-        'max_num_epochs': 10,
+        'max_num_epochs': 3,
         'save_mode': 1,
     }

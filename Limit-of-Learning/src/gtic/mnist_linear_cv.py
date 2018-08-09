@@ -15,8 +15,8 @@ data_name = 'MNIST'
 model_dir = 'mnist'
 model_name = 'linear'
 modelselect = 'cv'
-model_id = [9,10]
-data_size = [5000,10000]
+#model_id = [9,10]
+data_size = [5000,10000,20000,50000]
 num_fold = [1,3]
 milestones = [150]
 metric = ['crossvalidation_loss','modelselect_loss','modelselect_acc','modelselect_id','efficiency','timing']
@@ -26,12 +26,12 @@ device = torch.device(config.PARAM['device'])
 max_num_epochs = config.PARAM['max_num_epochs']
 save_mode = config.PARAM['save_mode']
 init_seed = 0
-num_Experiments = 2
+num_Experiments = 10
 seeds = list(range(init_seed,init_seed+num_Experiments))
 input_feature = (28,28)
 output_feature = 10
 input_feature_idx = modelselect_input_feature(input_feature,init_size=3,step_size=2,start_point=0)
-#model_id = list(range(len(input_feature_idx)))
+model_id = list(range(len(input_feature_idx)))
 
 
 def main():
