@@ -1,17 +1,19 @@
-import pickle
 import time
 import torch
+import torchvision
 import itertools
 import os
 import sys
 import shutil
 import zipfile
 import numpy as np
-import seaborn as sns
 import cv2
 from PIL import Image
 from matplotlib import pyplot as plt
 from torch import nn
+from torchvision.utils import make_grid
+from torchvision.utils import save_image
+from torchsummary import summary
 
 def save(input,dir,protocol = 2,mode='torch'):
     dirname = os.path.dirname(dir)
@@ -135,12 +137,8 @@ def gen_hidden_layers(max_num_nodes,init_size=None,step_size=None):
     return hidden_layers
 
 def print_result(epoch,train_result,test_result):
-    print('Epoch: {0}\t'
-        'Patch Size: {patch_size}\t'
-        'Loss {losses.avg:.4f}\t'
-        'PSNR {psnrs.avg:.4f}\t'
-        'Time {time}\t'
-        .format(epoch,patch_size=train_result[2].sum,losses=test_result[2],psnrs=test_result[3],time=train_result[0].sum))
+    print('Test Epoch: {0}\tPatch Size: {patch_size.sum}\tLoss: {losses.avg:.4f}\tPSNR: {psnrs.avg:.4f}\tTime: {time.sum}'
+        .format(epoch,patch_size=train_result[2],losses=test_result[2],psnrs=test_result[3],time=train_result[0]))
     return
 
 def merge_result(train_result,test_result,new_train_result,new_test_result):
@@ -161,7 +159,18 @@ def CV2_to_PIL():
     cv2_img = cv2.cvtColor(cv2_img,cv2.COLOR_BGR2RGB)
     pil_img = Image.fromarray(cv2_img)
     return pil_img
+
+def to_img(x):
+    x = x.clamp(0, 1)
+    return x
     
+def save_img(img,nrow,path):
+    dirname = os.path.dirname(path)
+    if not os.path.exists(dirname):
+        os.makedirs(dirname, exist_ok=True)
+    gridded_img = make_grid(img,nrow=nrow)
+    save_image(gridded_img, path)
+            
 # ===================Object===================== 
 
 class Meter(object):
@@ -237,10 +246,10 @@ def softmax(x):
     assert x.shape == orig_shape
     return x
     
-def PSNR(input,decoded_input,max=1.0):
-    MAX = torch.tensor(max).to(input.device)
-    criterion = nn.MSELoss(reduction='sum').to(input.device)
-    MSE = criterion(input,decoded_input)/input.numel()
+def PSNR(output,target,max=1.0):
+    MAX = torch.tensor(max).to(target.device)
+    criterion = nn.MSELoss(reduction='sum').to(target.device)
+    MSE = criterion(output,target)/target.numel()
     psnr = 20*torch.log10(MAX)-10*torch.log10(MSE)
     return psnr
     
@@ -273,5 +282,8 @@ def plt_meter(Meters,names,TAG):
             os.makedirs('./output/fig/{}'.format(names[i]), exist_ok=True) 
         fig.savefig('./output/fig/{}/{}'.format(names[i],TAG), dpi=fig.dpi)
 
-
-    
+def show(img): 
+    npimg = img.cpu().numpy()
+    plt.imshow(npimg, interpolation='nearest')
+    # plt.imshow(np.transpose(npimg, (1,2,0)), interpolation='nearest')
+    plt.show()

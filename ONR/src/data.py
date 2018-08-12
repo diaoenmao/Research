@@ -14,7 +14,7 @@ from util import *
 seed = 1234
 
 def fetch_dataset(data_name):
-    print('fetching data...')
+    print('fetching data {}...'.format(data_name))
     stats_name = './data/stats/stats_{}.pkl'.format(data_name)
     if(data_name=='MNIST'):
         train_dir = './data/{}/train/'.format(data_name)
@@ -38,31 +38,6 @@ def fetch_dataset(data_name):
         ])
         train_dataset = datasets.MNIST(root=train_dir, train=True, download=True, transform=transform_train)
         test_dataset = datasets.MNIST(root=test_dir, train=False, download=True, transform=transform_test)
-
-    elif(data_name=='CIFAR10' or data_name=='CIFAR100'):
-        train_dir = './data/{}/train/'.format(data_name)
-        test_dir = './data/{}/test/'.format(data_name)
-        if(not os.path.exists(train_dir)):
-            os.makedirs(train_dir, exist_ok=True)
-        if(not os.path.exists(test_dir)):
-            os.makedirs(train_dir, exist_ok=True)
-        if(os.path.exists(stats_name)):
-            mean,std = load(stats_name)
-        else:
-            train_dataset = datasets.CIFAR10(root=train_dir, train=True, download=True, transform=transforms.ToTensor())
-            mean,std = get_mean_and_std(train_dataset,data_name)
-        transform_train = transforms.Compose([
-            transforms.RandomCrop(32, padding=4),
-            transforms.RandomHorizontalFlip(),
-            transforms.ToTensor(),
-            transforms.Normalize(mean, std)
-        ])
-        transform_test = transforms.Compose([
-            transforms.ToTensor(),
-            transforms.Normalize(mean, std)
-        ])
-        train_dataset = datasets.CIFAR10(root=train_dir, train=True, download=True, transform=transform_train)
-        test_dataset = datasets.CIFAR10(root=test_dir, train=False, download=True, transform=transform_test)
         
     elif(data_name=='ImageNet'):
         train_dir = './data/{}/train/'.format(data_name)
@@ -70,104 +45,21 @@ def fetch_dataset(data_name):
         train_dataset = datasets.ImageFolder(
             train_dir,
             transforms.Compose([
-                transforms.RandomHorizontalFlip(),
-                transforms.Lambda(lambda x: RGB_to_YCbCr(x)),
-                transforms.ToTensor()]))     
+                transforms.Grayscale(),
+                transforms.ToTensor()]))    
         test_dataset = datasets.ImageFolder(
             test_dir,
             transforms.Compose([
-            transforms.Lambda(lambda x: RGB_to_YCbCr(x)),
+            transforms.Grayscale(),
             transforms.ToTensor()]))
-        
-    elif(data_name=='SVHN_train' or data_name=='SVHN_extra' or data_name=='SVHN_all'):
-        head_data_name,type = data_name.split('_')
-        train_dir = './data/{}/train/'.format(head_data_name)
-        test_dir = './data/{}/test/'.format(head_data_name)
-        if(not os.path.exists(train_dir)):
-            os.makedirs(train_dir, exist_ok=True)
-        if(not os.path.exists(test_dir)):
-            os.makedirs(train_dir, exist_ok=True)
-        if(type=='train'):
-            if(os.path.exists(stats_name)):
-                mean,std = load(stats_name)
-            else:
-                train_dataset = datasets.SVHN(root=train_dir, split='train', download=True, transform=transforms.ToTensor())
-                mean,std = get_mean_and_std(train_dataset,data_name)
-            transform_train = transforms.Compose([
-                transforms.RandomCrop(32, padding=4),
-                transforms.ToTensor(),
-                transforms.Normalize(mean, std)
-            ])
-            transform_test = transforms.Compose([
-                transforms.ToTensor(),
-                transforms.Normalize(mean, std)
-            ])
-            train_dataset = datasets.SVHN(root=train_dir, split='train', download=True, transform=transform_train)
-            test_dataset = datasets.SVHN(root=test_dir, split='test', download=True, transform=transform_test)
-        elif(type=='extra'):  
-            if(os.path.exists(stats_name)):
-                mean,std = load(stats_name)
-            else:
-                train_dataset = datasets.SVHN(root=train_dir, split='extra', download=True, transform=transforms.ToTensor())
-                mean,std = get_mean_and_std(train_dataset,data_name)
-            transform_train = transforms.Compose([
-                transforms.RandomCrop(32, padding=4),
-                transforms.ToTensor(),
-                transforms.Normalize(mean, std)
-            ])
-            transform_test = transforms.Compose([
-                transforms.ToTensor(),
-                transforms.Normalize(mean, std)
-            ])
-            train_dataset = datasets.SVHN(root=train_dir, split='extra', download=True, transform=transform_train)
-            test_dataset = datasets.SVHN(root=test_dir, split='test', download=True, transform=transform_test)          
-        elif(type=='all'):
-            if(os.path.exists(stats_name)):
-                mean,std = load(stats_name)
-            else:
-                train_train_dataset = datasets.SVHN(root=train_dir, split='train', download=True, transform=transforms.ToTensor())
-                extra_train_dataset = datasets.SVHN(root=train_dir, split='extra', download=True, transform=transforms.ToTensor())
-                train_dataset = data_utils.ConcatDataset([train_train_dataset,extra_train_dataset])
-                mean,std = get_mean_and_std(train_dataset,data_name)
-            transform_train = transforms.Compose([
-                transforms.RandomCrop(32, padding=4),
-                transforms.ToTensor(),
-                transforms.Normalize(mean, std)
-            ])
-            transform_test = transforms.Compose([
-                transforms.ToTensor(),
-                transforms.Normalize(mean, std)
-            ])
-            train_train_dataset = datasets.SVHN(root=train_dir, split='train', download=True, transform=transform_train)
-            extra_train_dataset = datasets.SVHN(root=train_dir, split='extra', download=True, transform=transform_train)
-            train_dataset = data_utils.ConcatDataset([train_train_dataset,extra_train_dataset])
-            test_dataset = datasets.SVHN(root=test_dir, split='test', download=True, transform=transform_test)
-            
-    elif(data_name=='EMNIST_byclass' or data_name=='EMNIST_bymerge' or data_name=='EMNIST_balanced' or data_name=='EMNIST_letters' or data_name=='EMNIST_digits' or data_name=='EMNIST_mnist'):
-        head_data_name,type = data_name.split('_')
-        train_dir = './data/{}/train/'.format(head_data_name)
-        test_dir = './data/{}/test/'.format(head_data_name)
-        if(not os.path.exists(train_dir)):
-            os.makedirs(train_dir, exist_ok=True)
-        if(not os.path.exists(test_dir)):
-            os.makedirs(train_dir, exist_ok=True)
-        if(os.path.exists(stats_name)):
-            mean,std = load(stats_name)
-        else:
-            train_dataset = datasets.EMNIST(root=train_dir, split=type, download=True, transform=transforms.ToTensor())
-            mean,std = get_mean_and_std(train_dataset,data_name)
-        transform_train = transforms.Compose([
-            transforms.RandomCrop(32, padding=4),
-            transforms.ToTensor(),
-            transforms.Normalize(mean, std)
-        ])
-        transform_test = transforms.Compose([
-            transforms.Resize(32),
-            transforms.ToTensor(),
-            transforms.Normalize(mean, std)
-        ])
-        train_dataset = datasets.EMNIST(root=train_dir, split=type, train=True, download=True, transform=transform_train)     
-        test_dataset = datasets.EMNIST(root=test_dir, split=type, train=False, download=True, transform=transform_test)
+    elif(data_name =='Kodak'):
+        train_dataset = None
+        test_dir = './data/{}/'.format(data_name)
+        test_dataset = datasets.ImageFolder(
+            test_dir,
+            transforms.Compose([
+                transforms.Grayscale(),
+                transforms.ToTensor()]))
     print('data ready')
     return train_dataset,test_dataset
 
