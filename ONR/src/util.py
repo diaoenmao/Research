@@ -204,11 +204,29 @@ def p_inverse(A):
     return pinv 
 
 def RGB_to_YCbCr(input):
-    output = input.convert('YCbCr')
+    input = input*255
+    output = input.new_empty(input.size())
+    if(input.dim()==3):
+        output[0, :, :] = input[0, :, :] * 0.299 + input[1, :, :] * 0.587 + input[2, :, :] * 0.114
+        output[1, :, :] = input[0, :, :] * (-0.168736) + input[1, :, :] * (-0.331264) + input[2, :, :] * 0.5 + 128
+        output[2, :, :] = input[ 0, :, :] * 0.5 + input[1, :, :] * (-0.418688) + input[2, :, :] * (-0.081312) + 128
+    elif(input.dim()==4):
+        output[:,0, :, :] = input[:, 0, :, :] * 0.299 + input[:, 1, :, :] * 0.587 + input[:, 2, :, :] * 0.114
+        output[:,1, :, :] = input[:, 0, :, :] * (-0.168736) + input[:, 1, :, :] * (-0.331264) + input[:, 2, :, :] * 0.5 + 128
+        output[:,2, :, :] = input[:, 0, :, :] * 0.5 + input[:, 1, :, :] * (-0.418688) + input[:, 2, :, :] * (-0.081312) + 128
+    else:
+        print('Wrong image dimension')
+        exit()
+    output = output/255
     return output
   
 def YCbCr_to_RGB(input):
-    output = input.convert('RGB')
+    input = input*255
+    output = input.new_empty(input.size())
+    output[:, 0, :, :] = input[:, 0, :, :] + (input[:, 2, :, :] - 128) * 1.402
+    output[:, 1, :, :] = input[:, 0, :, :] + (input[:, 1, :, :] - 128) * (-0.344136) + (input[:, 2, :, :] - 128) * (-0.714136)
+    output[:, 2, :, :] = input[:, 0, :, :] + (input[:, 1, :, :] - 128) * 1.772
+    output = output/255
     return output
 
 # ===================Metric=====================

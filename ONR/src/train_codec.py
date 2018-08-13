@@ -14,9 +14,9 @@ cudnn.benchmark = False
 data_name = 'ImageNet'
 model_dir = 'imagenet'
 model_name = 'cae'
-milestones = [50]
 TAG = data_name+'_'+model_name
 config.init()
+milestones = config.PARAM['milestones']
 patch_shape = config.PARAM['patch_shape']
 batch_size = config.PARAM['batch_size']
 data_size = config.PARAM['data_size']
@@ -118,7 +118,7 @@ def train(train_loader,mw,epoch):
             mw.optimizer.step()
             batch_time.update(time.time() - end)
             end = time.time()
-        if i % (len(train_loader)/10) == 0:
+        if i % (len(train_loader)/5) == 0:
             print('Train Epoch: {}[({:.0f}%)]\tLoss: {:.6f}\tPNSR: {:.3f}'.format(
                 epoch, 100. * i / len(train_loader), loss.item(), psnr.item()))
     return batch_time,data_time,patch_size,losses,psnrs

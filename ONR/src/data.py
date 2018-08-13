@@ -42,24 +42,21 @@ def fetch_dataset(data_name):
     elif(data_name=='ImageNet'):
         train_dir = './data/{}/train/'.format(data_name)
         test_dir = './data/{}/validation/'.format(data_name)
+        transform = transforms.Compose([transforms.ToTensor(),
+                    transforms.Lambda(lambda x: RGB_to_YCbCr(x)),
+                    transforms.Lambda(lambda x: extract_channel(x,0))])
         train_dataset = datasets.ImageFolder(
-            train_dir,
-            transforms.Compose([
-                transforms.Grayscale(),
-                transforms.ToTensor()]))    
+            train_dir, transform)
         test_dataset = datasets.ImageFolder(
-            test_dir,
-            transforms.Compose([
-            transforms.Grayscale(),
-            transforms.ToTensor()]))
+            test_dir, transform)
     elif(data_name =='Kodak'):
         train_dataset = None
+        transform = transforms.Compose([transforms.ToTensor(),
+                    transforms.Lambda(lambda x: RGB_to_YCbCr(x)),
+            transforms.Lambda(lambda x: extract_channel(x,0))])
         test_dir = './data/{}/'.format(data_name)
         test_dataset = datasets.ImageFolder(
-            test_dir,
-            transforms.Compose([
-                transforms.Grayscale(),
-                transforms.ToTensor()]))
+            test_dir, transform)
     print('data ready')
     return train_dataset,test_dataset
 
@@ -183,6 +180,9 @@ def unzip(path,mode='zip'):
         tar.close()
         print('...Done')
     return   
+
+def extract_channel(img,dim=0):
+    return img[[dim],]
     
 def extract_patches_2D(img,size):
     patch_H, patch_W = size[0], size[1]
