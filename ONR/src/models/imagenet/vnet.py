@@ -81,23 +81,23 @@ class DownTransition(nn.Module):
 class UpTransition(nn.Module):
     def __init__(self, inChans, outChans, nConvs, elu, dropout=False):
         super(UpTransition, self).__init__()
-        self.up_conv = nn.ConvTranspose2d(inChans, outChans // 2, kernel_size=2, stride=2)
-        self.bn1 = nn.BatchNorm2d(outChans // 2)
+        self.up_conv = nn.ConvTranspose2d(inChans, outChans , kernel_size=2, stride=2)
+        self.bn1 = nn.BatchNorm2d(outChans)
         self.do1 = passthrough
         self.do2 = nn.Dropout2d()
-        self.relu1 = ELUCons(elu, outChans // 2)
+        self.relu1 = ELUCons(elu, outChans)
         self.relu2 = ELUCons(elu, outChans)
         if dropout:
             self.do1 = nn.Dropout2d()
         self.ops = _make_nConv(outChans, nConvs, elu)
 
-    def forward(self, x, skipx):
+    def forward(self, x):
         out = self.do1(x)
-        skipxdo = self.do2(skipx)
-        out = self.relu1(self.bn1(self.up_conv(out)))
-        xcat = torch.cat((out, skipxdo), 1)
-        out = self.ops(xcat)
-        out = self.relu2(torch.add(out, xcat))
+        #skipxdo = self.do2(skipx)
+        up = self.relu1(self.bn1(self.up_conv(out)))
+        #xcat = torch.cat((out, skipxdo), 1)
+        out = self.ops(up)
+        out = self.relu2(torch.add(out, up))
         return out
 
 
@@ -161,10 +161,10 @@ class VNet(nn.Module):
         out64 = self.down_tr64(out32)
         out128 = self.down_tr128(out64)
         out256 = self.down_tr256(out128)
-        out = self.up_tr256(out256, out128)
-        out = self.up_tr128(out, out64)
-        out = self.up_tr64(out, out32)
-        out = self.up_tr32(out, out16)
+        out = self.up_tr256(out256)
+        out = self.up_tr128(out)
+        out = self.up_tr64(out)
+        out = self.up_tr32(out)
         out = self.out_tr(out)
         return out
         
