@@ -43,7 +43,6 @@ def fetch_dataset(data_name):
         train_dir = './data/{}/train/'.format(data_name)
         test_dir = './data/{}/validation/'.format(data_name)
         transform = transforms.Compose([transforms.ToTensor(),
-                    transforms.Lambda(lambda x: RGB_to_YCbCr(x)),
                     transforms.Lambda(lambda x: extract_channel(x,0))])
         train_dataset = datasets.ImageFolder(
             train_dir, transform)
@@ -52,7 +51,6 @@ def fetch_dataset(data_name):
     elif(data_name =='Kodak'):
         train_dataset = None
         transform = transforms.Compose([transforms.ToTensor(),
-                    transforms.Lambda(lambda x: RGB_to_YCbCr(x)),
             transforms.Lambda(lambda x: extract_channel(x,0))])
         test_dir = './data/{}/'.format(data_name)
         test_dataset = datasets.ImageFolder(

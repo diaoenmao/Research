@@ -13,7 +13,7 @@ from modelWrapper import *
 cudnn.benchmark = False
 data_name = 'ImageNet'
 model_dir = 'imagenet'
-model_name = 'cae'
+model_name = 'vnet'
 TAG = data_name+'_'+model_name
 config.init()
 milestones = config.PARAM['milestones']
@@ -147,11 +147,11 @@ def test(validation_loader,mw,epoch):
                 psnrs.update(psnr.item(), patch.size(0))
                 batch_time.update(time.time() - end)
                 end = time.time()
-        if epoch % 3 == 0:
-            nrow = int(np.ceil(float(input.size(3))/patch_shape[1]))
-            if not os.path.exists('.{}/image.png'.format(output_dir)):
-                save_img(patches,nrow,'{}/image.png'.format(output_dir))
-            save_img(output,nrow,'{}/image_{}.png'.format(output_dir,epoch))
+            if epoch % 3 == 0:
+                nrow = int(np.ceil(float(input.size(3))/patch_shape[1]))
+                if not os.path.exists('.{}/image_{}.png'.format(output_dir,i)):
+                    save_img(patches,nrow,'{}/image_{}.png'.format(output_dir,i))
+                save_img(output,nrow,'{}/image_{}_{}.png'.format(output_dir,i,epoch))
     return batch_time,data_time,losses,psnrs
 
 
