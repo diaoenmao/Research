@@ -13,7 +13,7 @@ from modelWrapper import *
 cudnn.benchmark = False
 data_name = 'ImageNet'
 model_dir = 'imagenet'
-model_name = 'vnet'
+model_name = 'VNet'
 TAG = data_name+'_'+model_name
 config.init()
 milestones = config.PARAM['milestones']
@@ -48,7 +48,8 @@ def runExperiment(Experiment_TAG):
     train_loader,test_loader = split_dataset(train_dataset,test_dataset,data_size,batch_size=1,num_fold=0,radomGen=randomGen)
     print('Training data size {}, Test data size {}'.format(len(train_loader),len(test_dataset)))
     model = eval('models.{}.{}().to(device)'.format(model_dir,model_name))
-    summary(model, input_size=(1, 128, 128))
+    summary(model.to('cuda'), input_size=(1, 128, 128))
+    model = model.to(device)
     criterion_MSE = nn.MSELoss().to(device)
     mw = modelWrapper(model,config.PARAM['optimizer_name'])
     mw.set_optimizer_param(config.PARAM['optimizer_param'])
