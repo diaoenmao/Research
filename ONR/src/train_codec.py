@@ -13,7 +13,7 @@ from modelWrapper import *
 cudnn.benchmark = False
 data_name = 'ImageNet'
 model_dir = 'imagenet'
-model_name = 'VNet'
+model_name = 'CAE'
 TAG = data_name+'_'+model_name
 config.init()
 milestones = config.PARAM['milestones']
@@ -47,8 +47,9 @@ def runExperiment(Experiment_TAG):
     
     train_loader,test_loader = split_dataset(train_dataset,test_dataset,data_size,batch_size=1,num_fold=0,radomGen=randomGen)
     print('Training data size {}, Test data size {}'.format(len(train_loader),len(test_dataset)))
-    model = eval('models.{}.{}().to(device)'.format(model_dir,model_name))
+    model = eval('models.{}.{}(if_balance=False).to(device)'.format(model_dir,model_name))
     summary(model.to('cuda'), input_size=(1, 128, 128))
+    model.if_balance = True
     model = model.to(device)
     criterion_MSE = nn.MSELoss().to(device)
     mw = modelWrapper(model,config.PARAM['optimizer_name'])
@@ -111,7 +112,7 @@ def train(train_loader,mw,epoch):
             patch_size.update(patch.size(0))
             output = mw.model(patch)
             loss = mw.loss(output,patch)
-            psnr = PSNR(patch,output)
+            psnr = PSNR(output[0],patch) if mw.model.if_balance else PSNR(output,patch)
             losses.update(loss.item(), patch.size(0))
             psnrs.update(psnr.item(), patch.size(0))
             mw.optimizer.zero_grad()
@@ -143,7 +144,7 @@ def test(validation_loader,mw,epoch):
                 data_time.update(time.time() - end)
                 output = mw.model(patch)
                 loss = mw.loss(output,patch)
-                psnr = PSNR(patch,output)
+                psnr = PSNR(output[0],patch) if mw.model.if_balance else PSNR(output,patch)
                 losses.update(loss.item(), patch.size(0))
                 psnrs.update(psnr.item(), patch.size(0))
                 batch_time.update(time.time() - end)
@@ -152,7 +153,7 @@ def test(validation_loader,mw,epoch):
                 nrow = int(np.ceil(float(input.size(3))/patch_shape[1]))
                 if not os.path.exists('.{}/image_{}.png'.format(output_dir,i)):
                     save_img(patches,nrow,'{}/image_{}.png'.format(output_dir,i))
-                save_img(output,nrow,'{}/image_{}_{}.png'.format(output_dir,i,epoch))
+                save_img(output[0],nrow,'{}/image_{}_{}.png'.format(output_dir,i,epoch)) if mw.model.if_balance else save_img(output,nrow,'{}/image_{}_{}.png'.format(output_dir,i,epoch))
     return batch_time,data_time,losses,psnrs
 
 
