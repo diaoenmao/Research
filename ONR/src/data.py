@@ -55,6 +55,13 @@ def fetch_dataset(data_name):
         test_dir = './data/{}/'.format(data_name)
         test_dataset = datasets.ImageFolder(
             test_dir, transform)
+    elif(data_name =='UCID'):
+        test_dataset = None
+        transform = transforms.Compose([transforms.ToTensor(),
+            transforms.Lambda(lambda x: extract_channel(x,0))])
+        train_dir = './data/{}/'.format(data_name)
+        train_dataset = datasets.ImageFolder(
+            train_dir, transform)
     print('data ready')
     return train_dataset,test_dataset
 

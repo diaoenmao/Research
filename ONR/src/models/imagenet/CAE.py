@@ -118,59 +118,89 @@ class Encoder(nn.Module):
         super(Encoder, self).__init__()
         self.input = InputTransition(32)
         self.down_0 = DownTransition(32,64,1)
-        self.down_1 = DownTransition(64,32,1)           
+        self.down_1 = DownTransition(64,64,2)
+        self.down_2 = DownTransition(64,32,3)        
         self.quantizer = Quantizer()
 
-    def forward(self, x_in_0, balance=True):
-        x_in_1 = self.input(x_in_0)
-        x_in_2 = self.down_0(x_in_1)
-        x = self.down_1(x_in_2)
-        code = self.quantizer(x)
-        if(balance):
-            return code,[x_in_0,x_in_1,x_in_2]
-        else:
-            return code
+    def forward(self, x):
+        x = self.input(x)
+        x = self.down_0(x)
+        x = self.down_1(x)
+        x = self.down_2(x)
+        x = self.quantizer(x)
+        return x
 
 class Decoder(nn.Module):
     def __init__(self):
         super(Decoder, self).__init__()
-        self.up_0 = UpTransition(32,64,1) 
-        self.up_1 = UpTransition(64,32,1)
+        self.up_0 = UpTransition(32,64,3) 
+        self.up_1 = UpTransition(64,64,2)
+        self.up_2 = UpTransition(64,32,1)
         self.output = OutputTransition(32)      
 
-    def forward(self, x, balance=True):
-        x_out_2 = self.up_0(x)
-        x_out_1 = self.up_1(x_out_2)
-        x_out_0 = self.output(x_out_1)
-        if(balance):        
-            return x_out_0,[x_out_0,x_out_1,x_out_2]
-        else:
-            return x_out_0
+    def forward(self, x):
+        x = self.up_0(x)
+        x = self.up_1(x)
+        x = self.up_2(x)
+        x = self.output(x)
+        return x
         
 class CAE(nn.Module):
-    def __init__(self,if_balance=True):
+    def __init__(self):
         super(CAE, self).__init__()
         self.encoder = Encoder()
         self.decoder = Decoder()
-        self.if_balance = if_balance
-        self.balance_loss_fn = nn.MSELoss()
+        self.quantizer = Quantizer()
         
-    def balance(self, x):
-        code,down = self.encoder(x)
-        decoded_x,up = self.decoder(code)
-        balance_loss = []
-        for i in range(len(down)):
-            balance_loss.append(self.balance_loss_fn(up[i],down[i]))
-        return decoded_x,balance_loss
-        
-    def forward(self, x,):
-        if(self.if_balance):
-             decoded_x, balance_loss = self.balance(x)
-             return decoded_x,balance_loss
-        else:
-            code = self.encoder(x,self.if_balance)
-            decoded_x = self.decoder(code,self.if_balance)
-            return decoded_x
+    def forward(self, x):
+        x = self.encoder(x)
+        x = self.quantizer(x)
+        x = self.decoder(x)
+        return x
+
+# class CAE(nn.Module):
+    # def __init__(self):
+        # super(CAE, self).__init__()
+        # self.encoder = nn.Sequential(
+            # nn.Conv2d(1, 32, 2, stride=2, padding=0),
+            # nn.ReLU(True),
+            # nn.Conv2d(32, 64, 2, stride=2, padding=0),
+            # nn.ReLU(True),
+            # nn.Conv2d(64, 64, 3, stride=1, padding=1),       
+            # nn.ReLU(True),
+            # nn.Conv2d(64, 64, 3, stride=1, padding=1),
+            # nn.ReLU(True),
+            # nn.Conv2d(64, 64, 3, stride=1, padding=1),
+            # nn.ReLU(True),
+            # nn.Conv2d(64, 64, 3, stride=1, padding=1),
+            # nn.ReLU(True),
+            # nn.Conv2d(64, 32, 2, stride=2, padding=0),
+            # nn.ReLU(True),
+               
+        # )
+        # self.decoder = nn.Sequential(
+            # nn.ConvTranspose2d(32, 64, 2, stride=2, padding=0),
+            # nn.ReLU(True),
+            # nn.Conv2d(64, 64, 3, stride=1, padding=1),
+            # nn.ReLU(True),
+            # nn.Conv2d(64, 64, 3, stride=1, padding=1),
+            # nn.ReLU(True),
+            # nn.Conv2d(64, 64, 3, stride=1, padding=1),
+            # nn.ReLU(True),
+            # nn.Conv2d(64, 64, 3, stride=1, padding=1),
+            # nn.ReLU(True),
+            # nn.ConvTranspose2d(64, 32, 2, stride=2, padding=0),
+            # nn.ReLU(True),
+            # nn.ConvTranspose2d(32, 1, 2, stride=2, padding=0), 
+            # nn.Tanh()
+        # )
+        # self.quantizer = Quantizer()
+
+    # def forward(self, x):
+        # x = self.encoder(x)
+        # x = self.quantizer(x)
+        # x = self.decoder(x)
+        # return x
         
 def cae(**kwargs):
     model = CAE(**kwargs)
