@@ -11,7 +11,7 @@ from modelWrapper import *
 
 
 cudnn.benchmark = False
-data_name = 'UCID'
+data_name = 'ImageNet'
 model_dir = 'imagenet'
 model_name = 'CAE'
 TAG = data_name+'_'+model_name
