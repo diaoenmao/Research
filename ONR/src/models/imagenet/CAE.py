@@ -74,11 +74,12 @@ class DownTransition(nn.Module):
 class UpSample(nn.Module):
     def __init__(self, inchan, outchan):
         super(UpSample, self).__init__()
-        self.conv = nn.ConvTranspose2d(inchan, outchan, kernel_size=2, stride=2, padding=0)
+        self.conv = nn.Conv2d(inchan, outchan*4, kernel_size=3, stride=1, padding=1)
+        self.subpix = nn.PixelShuffle(2)
         self.activation = Activation(outchan)
         
     def forward(self, x):
-        x = self.activation(self.conv(x))
+        x = self.activation(self.subpix(self.conv(x)))
         return x
                 
 class UpTransition(nn.Module):
@@ -145,94 +146,94 @@ class Decoder(nn.Module):
         x = self.output(x)
         return x
         
-# class CAE(nn.Module):
-    # def __init__(self):
-        # super(CAE, self).__init__()
-        # self.encoder = Encoder()
-        # self.decoder = Decoder()
-        # self.quantizer = Quantizer()
-        
-    # def forward(self, x):
-        # x = self.encoder(x)
-        # x = self.quantizer(x)
-        # x = self.decoder(x)
-        # return x
-
 class CAE(nn.Module):
     def __init__(self):
         super(CAE, self).__init__()
-        self.down_1 = nn.Sequential(
-            nn.Conv2d(1, 64, 5, stride=2, padding=2),
-            nn.ReLU(True),
-            nn.Conv2d(64, 128, 5, stride=2, padding=2),
-            nn.ReLU(True))
-        self.res_block_1 = nn.Sequential(
-            nn.Conv2d(128, 128, 3, stride=1, padding=1),       
-            nn.ReLU(True),
-            nn.Conv2d(128, 128, 3, stride=1, padding=1),
-            nn.ReLU(True))
-        self.res_block_2 = nn.Sequential(
-            nn.Conv2d(128, 128, 3, stride=1, padding=1),       
-            nn.ReLU(True),
-            nn.Conv2d(128, 128, 3, stride=1, padding=1),
-            nn.ReLU(True))
-        self.res_block_3 = nn.Sequential(
-            nn.Conv2d(128, 128, 3, stride=1, padding=1),       
-            nn.ReLU(True),
-            nn.Conv2d(128, 128, 3, stride=1, padding=1),
-            nn.ReLU(True))
-        self.down_2 = nn.Sequential(
-            nn.Conv2d(128, 32, 5, stride=2, padding=2),       
-            nn.ReLU(True))
-        self.up_1 = nn.Sequential(
-            nn.Conv2d(32, 512, 3, stride=1, padding=1), 
-            nn.PixelShuffle(2),            
-            nn.ReLU(True))
-        self.res_block_4 = nn.Sequential(
-            nn.Conv2d(128, 128, 3, stride=1, padding=1),       
-            nn.ReLU(True),
-            nn.Conv2d(128, 128, 3, stride=1, padding=1),
-            nn.ReLU(True))
-        self.res_block_5 = nn.Sequential(
-            nn.Conv2d(128, 128, 3, stride=1, padding=1),       
-            nn.ReLU(True),
-            nn.Conv2d(128, 128, 3, stride=1, padding=1),
-            nn.ReLU(True))
-        self.res_block_6 = nn.Sequential(
-            nn.Conv2d(128, 128, 3, stride=1, padding=1),       
-            nn.ReLU(True),
-            nn.Conv2d(128, 128, 3, stride=1, padding=1),
-            nn.ReLU(True))
-        self.up_2 = nn.Sequential(
-            nn.Conv2d(128, 256, 3, stride=1, padding=1), 
-            nn.PixelShuffle(2),            
-            nn.ReLU(True))
-        self.up_3 = nn.Sequential(
-            nn.Conv2d(64, 4, 3, stride=1, padding=1), 
-            nn.PixelShuffle(2),            
-            nn.Tanh())
+        self.encoder = Encoder()
+        self.decoder = Decoder()
         self.quantizer = Quantizer()
-
+        
     def forward(self, x):
-        down = self.down_1(x)
-        res_1 = self.res_block_1(down)
-        down = down + res_1
-        res_2 = self.res_block_2(down)
-        down = down + res_2
-        res_3 = self.res_block_3(down)
-        down = down + res_3
-        x = self.down_2(down)
+        x = self.encoder(x)
         x = self.quantizer(x)
-        up = self.up_1(x)       
-        res_4 = self.res_block_4(up)
-        up = up + res_3
-        res_5 = self.res_block_5(up)
-        up = up + res_4
-        res_6 = self.res_block_6(up)
-        up = up + res_6
-        x = self.up_2(up)
-        x = self.up_3(x)
+        x = self.decoder(x)
         return x
+
+# class CAE(nn.Module):
+    # def __init__(self):
+        # super(CAE, self).__init__()
+        # self.down_1 = nn.Sequential(
+            # nn.Conv2d(1, 64, 5, stride=2, padding=2),
+            # nn.ReLU(True),
+            # nn.Conv2d(64, 128, 5, stride=2, padding=2),
+            # nn.ReLU(True))
+        # self.res_block_1 = nn.Sequential(
+            # nn.Conv2d(128, 128, 3, stride=1, padding=1),       
+            # nn.ReLU(True),
+            # nn.Conv2d(128, 128, 3, stride=1, padding=1),
+            # nn.ReLU(True))
+        # self.res_block_2 = nn.Sequential(
+            # nn.Conv2d(128, 128, 3, stride=1, padding=1),       
+            # nn.ReLU(True),
+            # nn.Conv2d(128, 128, 3, stride=1, padding=1),
+            # nn.ReLU(True))
+        # self.res_block_3 = nn.Sequential(
+            # nn.Conv2d(128, 128, 3, stride=1, padding=1),       
+            # nn.ReLU(True),
+            # nn.Conv2d(128, 128, 3, stride=1, padding=1),
+            # nn.ReLU(True))
+        # self.down_2 = nn.Sequential(
+            # nn.Conv2d(128, 32, 5, stride=2, padding=2),       
+            # nn.ReLU(True))
+        # self.up_1 = nn.Sequential(
+            # nn.Conv2d(32, 512, 3, stride=1, padding=1), 
+            # nn.PixelShuffle(2),            
+            # nn.ReLU(True))
+        # self.res_block_4 = nn.Sequential(
+            # nn.Conv2d(128, 128, 3, stride=1, padding=1),       
+            # nn.ReLU(True),
+            # nn.Conv2d(128, 128, 3, stride=1, padding=1),
+            # nn.ReLU(True))
+        # self.res_block_5 = nn.Sequential(
+            # nn.Conv2d(128, 128, 3, stride=1, padding=1),       
+            # nn.ReLU(True),
+            # nn.Conv2d(128, 128, 3, stride=1, padding=1),
+            # nn.ReLU(True))
+        # self.res_block_6 = nn.Sequential(
+            # nn.Conv2d(128, 128, 3, stride=1, padding=1),       
+            # nn.ReLU(True),
+            # nn.Conv2d(128, 128, 3, stride=1, padding=1),
+            # nn.ReLU(True))
+        # self.up_2 = nn.Sequential(
+            # nn.Conv2d(128, 256, 3, stride=1, padding=1), 
+            # nn.PixelShuffle(2),            
+            # nn.ReLU(True))
+        # self.up_3 = nn.Sequential(
+            # nn.Conv2d(64, 4, 3, stride=1, padding=1), 
+            # nn.PixelShuffle(2),            
+            # nn.Tanh())
+        # self.quantizer = Quantizer()
+
+    # def forward(self, x):
+        # down = self.down_1(x)
+        # res_1 = self.res_block_1(down)
+        # down = down + res_1
+        # res_2 = self.res_block_2(down)
+        # down = down + res_2
+        # res_3 = self.res_block_3(down)
+        # down = down + res_3
+        # x = self.down_2(down)
+        # x = self.quantizer(x)
+        # up = self.up_1(x)       
+        # res_4 = self.res_block_4(up)
+        # up = up + res_3
+        # res_5 = self.res_block_5(up)
+        # up = up + res_4
+        # res_6 = self.res_block_6(up)
+        # up = up + res_6
+        # x = self.up_2(up)
+        # x = self.up_3(x)
+        # return x
         
 def cae(**kwargs):
     model = CAE(**kwargs)
