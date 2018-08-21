@@ -15,34 +15,54 @@ seed = 1234
 
 def fetch_dataset(data_name):
     print('fetching data {}...'.format(data_name))
+    stats_name = './data/stats/stats_{}.pkl'.format(data_name)
     if(data_name=='MNIST'):
         train_dir = './data/{}/train/'.format(data_name)
         test_dir = './data/{}/test/'.format(data_name)
-        transform = transforms.Compose([transforms.ToTensor(),
-                                        transforms.Resize((32,32))])
-        train_dataset = datasets.MNIST(root=train_dir, train=True, download=True, transform=transform)
-        test_dataset = datasets.MNIST(root=test_dir, train=False, download=True, transform=transform)
+        if(not os.path.exists(train_dir)):
+            os.makedirs(train_dir, exist_ok=True)
+        if(not os.path.exists(test_dir)):
+            os.makedirs(train_dir, exist_ok=True)
+        if(os.path.exists(stats_name)):
+            mean,std = load(stats_name)
+        else:
+            train_dataset = datasets.MNIST(root=train_dir, train=True, download=True, transform=transforms.ToTensor())
+            mean,std = get_mean_and_std(train_dataset,data_name)
+        transform_train = transforms.Compose([
+            transforms.ToTensor(),
+            transforms.Normalize(mean, std)
+        ])
+        transform_test = transforms.Compose([
+            transforms.ToTensor(),
+            transforms.Normalize(mean, std)
+        ])
+        train_dataset = datasets.MNIST(root=train_dir, train=True, download=True, transform=transform_train)
+        test_dataset = datasets.MNIST(root=test_dir, train=False, download=True, transform=transform_test)
         
     elif(data_name=='ImageNet'):
         train_dir = './data/{}/train/'.format(data_name)
         test_dir = './data/{}/validation/'.format(data_name)
-        transform = transforms.Compose([transforms.ToTensor()
-                                        transforms.Lambda(lambda x: extract_channel(x,0))])
+        transform = transforms.Compose([
+            transforms.RandomCrop((32, 32)),
+            transforms.ToTensor(),
+        ])
         train_dataset = datasets.ImageFolder(
             train_dir, transform)
         test_dataset = datasets.ImageFolder(
             test_dir, transform)
     elif(data_name =='Kodak'):
         train_dataset = None
-        transform = transforms.Compose([transforms.ToTensor()
-                                        transforms.Lambda(lambda x: extract_channel(x,0))])
+        transform = transforms.Compose([
+            transforms.RandomCrop((32, 32)),
+            transforms.ToTensor(),
+        ])
         test_dir = './data/{}/'.format(data_name)
         test_dataset = datasets.ImageFolder(
             test_dir, transform)
     elif(data_name =='UCID'):
         test_dataset = None
-        transform = transforms.Compose([transforms.ToTensor()
-                                        transforms.Lambda(lambda x: extract_channel(x,0))])
+        transform = transforms.Compose([transforms.ToTensor(),
+            transforms.Lambda(lambda x: extract_channel(x,0))])
         train_dir = './data/{}/'.format(data_name)
         train_dataset = datasets.ImageFolder(
             train_dir, transform)

@@ -1,9 +1,10 @@
 import torch
 import torchvision
 from torch import nn
-from functional import *
 
-activation_mode='elu'
+from modules import Quantize, Sign
+
+activation_mode='prelu'
 
 def _make_Conv(conv, inchan, outchan, depth):
     layers = []
@@ -35,6 +36,19 @@ class Basic_Conv(nn.Module):
         out = self.activation(self.conv(x))
         return out     
 
+class Separable_Conv(nn.Module):
+    def __init__(self,inchan, outchan, kernel_size=1, stride=1, padding=0, dilation=1):
+        super(Separable_Conv,self).__init__()
+        
+        self.conv = nn.Conv2d(inchan, inchan, kernel_size, stride, padding, dilation, groups=inchan)
+        self.pointwise = nn.Conv2d(inchan, outchan, kernel_size=1, stride=1, padding=0, dilation=1, groups=1)
+        self.activation = Activation(outchan)
+        
+    def forward(self,x):
+        x = self.conv(x)
+        x = self.activation(self.pointwise(x))
+        return x
+        
 class InputTransition(nn.Module):
     def __init__(self, outchan):
         super(InputTransition, self).__init__()
@@ -59,10 +73,10 @@ class DownSample(nn.Module):
         return x      
 
 class DownTransition(nn.Module):
-    def __init__(self, inchan, outchan, depth):
+    def __init__(self, Conv, inchan, outchan, depth):
         super(DownTransition, self).__init__()
         self.downsample = DownSample(inchan, outchan)
-        self.conv = _make_Conv(Basic_Conv,outchan,outchan,depth)
+        self.conv = _make_Conv(Conv,outchan,outchan,depth)
         self.activation = Activation(outchan)
         
     def forward(self, x):
@@ -74,19 +88,18 @@ class DownTransition(nn.Module):
 class UpSample(nn.Module):
     def __init__(self, inchan, outchan):
         super(UpSample, self).__init__()
-        self.conv = nn.Conv2d(inchan, outchan*4, kernel_size=3, stride=1, padding=1)
-        self.subpix = nn.PixelShuffle(2)
+        self.conv = nn.ConvTranspose2d(inchan, outchan, kernel_size=2, stride=2, padding=0)
         self.activation = Activation(outchan)
         
     def forward(self, x):
-        x = self.activation(self.subpix(self.conv(x)))
+        x = self.activation(self.conv(x))
         return x
                 
 class UpTransition(nn.Module):
-    def __init__(self, inchan, outchan, depth):
+    def __init__(self, Conv, inchan, outchan, depth):
         super(UpTransition, self).__init__()
         self.upsample = UpSample(inchan,outchan)
-        self.conv = _make_Conv(Basic_Conv,outchan,outchan,depth)
+        self.conv = _make_Conv(Conv,outchan,outchan,depth)
         self.activation = Activation(outchan)
 
     def forward(self, x):
@@ -109,18 +122,31 @@ class OutputTransition(nn.Module):
 class Quantizer(nn.Module):
     def __init__(self):
         super(Quantizer, self).__init__()
+        self.quantize = Quantize()
         
     def forward(self,x):
-        x = quantizer(x)
+        x = self.quantize(x)
         return x
         
+class Binarizer(nn.Module):
+    def __init__(self,inchan,outchan):
+        super(Binarizer, self).__init__()
+        self.conv = nn.Conv2d(inchan, outchan, kernel_size=1)
+        self.sign = Sign()
+
+    def forward(self, input):
+        feat = self.conv(input)
+        x = torch.tanh(feat)
+        return self.sign(x)
+        
 class Encoder(nn.Module):
-    def __init__(self):
+    def __init__(self, Conv):
         super(Encoder, self).__init__()
         self.input = InputTransition(32)
-        self.down_0 = DownTransition(32,64,1)
-        self.down_1 = DownTransition(64,64,2)
-        self.down_2 = DownTransition(64,32,3)        
+        self.down_0 = DownTransition(Conv,32,64,1)
+        self.down_1 = DownTransition(Conv,64,64,1)
+        self.down_2 = DownTransition(Conv,64,64,1)    
+        self.down_3 = DownTransition(Conv,64,32,1)        
         self.quantizer = Quantizer()
 
     def forward(self, x):
@@ -128,29 +154,32 @@ class Encoder(nn.Module):
         x = self.down_0(x)
         x = self.down_1(x)
         x = self.down_2(x)
+        x = self.down_3(x)
         x = self.quantizer(x)
         return x
 
 class Decoder(nn.Module):
-    def __init__(self):
+    def __init__(self, Conv):
         super(Decoder, self).__init__()
-        self.up_0 = UpTransition(32,64,3) 
-        self.up_1 = UpTransition(64,64,2)
-        self.up_2 = UpTransition(64,32,1)
+        self.up_0 = UpTransition(Conv,32,64,1) 
+        self.up_1 = UpTransition(Conv,64,64,1)
+        self.up_2 = UpTransition(Conv,64,64,1)
+        self.up_3 = UpTransition(Conv,64,32,1)
         self.output = OutputTransition(32)      
 
     def forward(self, x):
         x = self.up_0(x)
         x = self.up_1(x)
         x = self.up_2(x)
+        x = self.up_3(x)
         x = self.output(x)
         return x
         
 class CAE(nn.Module):
     def __init__(self):
         super(CAE, self).__init__()
-        self.encoder = Encoder()
-        self.decoder = Decoder()
+        self.encoder = Encoder(Basic_Conv)
+        self.decoder = Decoder(Basic_Conv)
         self.quantizer = Quantizer()
         
     def forward(self, x):

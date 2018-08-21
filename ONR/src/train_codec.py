@@ -17,6 +17,7 @@ model_name = 'CAE'
 TAG = data_name+'_'+model_name
 config.init()
 milestones = config.PARAM['milestones']
+gamma = config.PARAM['gamma']
 patch_shape = config.PARAM['patch_shape']
 batch_size = config.PARAM['batch_size']
 data_size = config.PARAM['data_size']
@@ -42,7 +43,7 @@ def runExperiment(Experiment_TAG):
     
     train_dataset,_ = fetch_dataset(data_name=data_name)
     _,test_dataset = fetch_dataset(data_name='Kodak')
-    #validated_num_epochs = validate_num_epochs(train_dataset)
+    validated_num_epochs = validate_num_epochs(train_dataset)
     validated_num_epochs = max_num_epochs
     
     train_loader,test_loader = split_dataset(train_dataset,test_dataset,data_size,batch_size=1,num_fold=0,radomGen=randomGen)
@@ -50,13 +51,13 @@ def runExperiment(Experiment_TAG):
     model = eval('models.{}.{}().to(device)'.format(model_dir,model_name))
     summary(model.to('cuda'), input_size=(1, 128, 128))
     model = model.to(device)
-    criterion_MSE = nn.MSELoss().to(device)
+    criterion = nn.MSELoss().to(device)
     mw = modelWrapper(model,config.PARAM['optimizer_name'])
     mw.set_optimizer_param(config.PARAM['optimizer_param'])
-    mw.set_criterion(criterion_MSE)
+    mw.set_criterion(criterion)
     mw.set_optimizer()
         
-    scheduler = MultiStepLR(mw.optimizer, milestones=milestones, gamma=0.1)
+    scheduler = MultiStepLR(mw.optimizer, milestones=milestones, gamma=gamma)
     for epoch in range(validated_num_epochs):
         scheduler.step()
         train_result = train(train_loader,mw,epoch)
@@ -76,13 +77,13 @@ def runExperiment(Experiment_TAG):
 def validate_num_epochs(train_dataset):
     train_loader,validation_loader = split_dataset(train_dataset,None,data_size,1,1,radomGen=randomGen)
     model = eval('models.{}.{}().to(device)'.format(model_dir,model_name))
-    criterion_MSE = nn.MSELoss().to(device)
+    criterion = nn.MSELoss().to(device)
     mw = modelWrapper(model,config.PARAM['optimizer_name'])
     mw.set_optimizer_param(config.PARAM['optimizer_param'])
-    mw.set_criterion(criterion_MSE)
+    mw.set_criterion(criterion)
     mw.set_optimizer()
     hyper_test_psnr = torch.zeros(max_num_epochs,device=device)
-    scheduler = MultiStepLR(mw.optimizer, milestones=milestones, gamma=0.1)
+    scheduler = MultiStepLR(mw.optimizer, milestones=milestones, gamma=gamma)
     for epoch in range(max_num_epochs):
         scheduler.step()
         train_result = train(train_loader[0],mw)
@@ -151,8 +152,8 @@ def test(validation_loader,mw,epoch):
             if epoch % 3 == 0:
                 nrow = int(np.ceil(float(input.size(3))/patch_shape[1]))
                 if not os.path.exists('.{}/image_{}.png'.format(output_dir,i)):
-                    save_img(patches,nrow,'{}/image_{}.png'.format(output_dir,i))
-                save_img(output,nrow,'{}/image_{}_{}.png'.format(output_dir,i,epoch))
+                    save_img(patches,'{}/image_{}.png'.format(output_dir,i),nrow)
+                save_img(output,'{}/image_{}_{}.png'.format(output_dir,i,epoch),nrow)
     return batch_time,data_time,losses,psnrs
 
 

@@ -1,8 +1,11 @@
 import torch
 from torch.autograd.function import Function
 
-class Quantizer(Function):
-    
+class Quantize(Function):
+
+    def __init__(self):
+        super(Quantize, self).__init__()   
+        
     @staticmethod
     def forward(ctx, input, inplace):
         if(inplace):
