@@ -78,24 +78,6 @@ def get_correct_cnt(output,target):
     correct_cnt = (max_index == target).float().sum()
     return correct_cnt
     
-def get_acc(output,target,topk):  
-    with torch.no_grad():
-        maxk = min(max(topk),output.size(1))
-        batch_size = target.size(0)
-        _, pred = output.topk(maxk, 1, True, True)
-        pred = pred.t()
-        correct = pred.eq(target.view(1, -1).expand_as(pred))
-
-        acc = []
-        for k in topk:
-            if(k<=maxk):
-                correct_k = correct[:k].view(-1).float().sum(0, keepdim=True)
-                cur_acc = correct_k.mul_(100.0 / batch_size)
-                acc.append(cur_acc.item())
-            else:
-                acc.append(1.0)
-    return acc
-
 def modelselect_input_feature(dims,init_size=2,step_size=1,start_point=None):
     if(isinstance(dims, int)):
         dims = [dims]
@@ -135,11 +117,6 @@ def gen_hidden_layers(max_num_nodes,init_size=None,step_size=None):
         hidden_layers.extend(list(itertools.product(*num_nodes)))
         del num_nodes[-1]   
     return hidden_layers
-
-def print_result(epoch,train_result,test_result):
-    print('Test Epoch: {0}\tPatch Size: {patch_size.sum}\tLoss: {losses.avg:.4f}\tPSNR: {psnrs.avg:.4f}\tTime: {time.sum}'
-        .format(epoch,patch_size=train_result[2],losses=test_result[2],psnrs=test_result[3],time=train_result[0]))
-    return
 
 def merge_result(train_result,test_result,new_train_result,new_test_result):
     if(train_result is None):
@@ -267,14 +244,31 @@ def softmax(x):
     
 def PSNR(output,target,max=1.0):
     MAX = torch.tensor(max).to(target.device)
-    criterion = nn.MSELoss(reduction='sum').to(target.device)
-    MSE = criterion(output,target)/target.numel()
+    criterion = nn.MSELoss().to(target.device)
+    MSE = criterion(output,target)
     psnr = 20*torch.log10(MAX)-10*torch.log10(MSE)
     return psnr
     
 def BPP(code,num_pixel):    
     return 8*code.numel()/num_pixel
-    
+
+def ACC(output,target,topk):  
+    with torch.no_grad():
+        maxk = min(max(topk),output.size(1))
+        batch_size = target.size(0)
+        _, pred = output.topk(maxk, 1, True, True)
+        pred = pred.t()
+        correct = pred.eq(target.view(1, -1).expand_as(pred))
+        acc = []
+        for k in topk:
+            if(k<=maxk):
+                correct_k = correct[:k].view(-1).float().sum(0, keepdim=True)
+                cur_acc = correct_k.mul_(100.0 / batch_size)
+                acc.append(cur_acc.item())
+            else:
+                acc.append(1.0)
+    return acc
+	
 # ===================Figure===================== 
 def plt_dist(x):
     plt.figure()

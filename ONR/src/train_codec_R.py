@@ -13,7 +13,7 @@ from modelWrapper import *
 cudnn.benchmark = False
 data_name = 'MNIST'
 model_dir = 'mnist'
-model_name = 'CAE'
+model_name = 'RCAE'
 TAG = data_name+'_'+model_name
 config.init()
 milestones = config.PARAM['milestones']
@@ -47,7 +47,7 @@ def runExperiment(Experiment_TAG):
     train_loader,test_loader = split_dataset(train_dataset,test_dataset,data_size,batch_size=batch_size,num_fold=0,radomGen=randomGen)
     print('Training data size {}, Test data size {}'.format(len(train_dataset),len(test_dataset)))
     model = eval('models.{}.{}().to(device)'.format(model_dir,model_name))
-    summary(model.to('cuda'), input_size=(1, patch_shape[0], patch_shape[1]))
+    #summary(model.to('cuda'), input_size=(1, patch_shape[0], patch_shape[1]))
     model = model.to(device)
     criterion = nn.CrossEntropyLoss().to(device)
     mw = modelWrapper(model,config.PARAM['optimizer_name'])
@@ -91,7 +91,7 @@ def train(train_loader,mw,epoch):
         acc = ACC(output[1],target,topk=(1,))
         losses.update(loss.item(), input.size(0))
         psnrs.update(psnr.item(), input.size(0))
-        accs.update(acc[0], input.size(0))
+        accs.update(acc[0])
         mw.optimizer.zero_grad()
         loss.backward()
         mw.optimizer.step()
@@ -123,7 +123,7 @@ def test(validation_loader,mw,epoch):
             acc = ACC(output[1],target,topk=(1,))
             losses.update(loss.item(), input.size(0))
             psnrs.update(psnr.item(), input.size(0))
-            accs.update(acc[0], input.size(0))
+            accs.update(acc[0])
             batch_time.update(time.time() - end)
             end = time.time()
         if epoch % 3 == 0:
@@ -133,10 +133,9 @@ def test(validation_loader,mw,epoch):
     return batch_time,data_time,losses,psnrs,accs
 
 def print_result(epoch,train_result,test_result):
-    print('Test Epoch: {0}\tLoss: {losses.avg:.4f}\tPSNR: {psnrs.avg:.4f}\tACC: {accs.avg:.4f}\tTime: {time.sum}'
+    print('Test Epoch: {0}\tLoss: {losses.avg:.4f}\tPSNR: {psnrs.avg:.4f}\tACC: {accs.avg".4f}\tTime: {time.sum}'
         .format(epoch,losses=test_result[2],psnrs=test_result[3],accs=test_result[4],time=train_result[0]))
     return
-
-
+    
 if __name__ == "__main__":
     main()    

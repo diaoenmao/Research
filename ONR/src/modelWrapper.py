@@ -47,12 +47,9 @@ class modelWrapper:
         return free_parameters
     
     def loss(self,output,target):
-        loss = self.criterion(output[1],target) + output[2]
+        #loss = self.criterion(output[1],target) + output[2]
+        loss = output[2]
         return loss
-        
-    def acc(self,output,target,topk=(1,)):
-        acc = get_acc(output,target,topk=topk)
-        return acc
     
     def set_optimizer(self):
         param = self.model.parameters()

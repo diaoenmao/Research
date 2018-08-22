@@ -18,15 +18,15 @@ def fetch_dataset(data_name):
     if(data_name=='MNIST'):
         train_dir = './data/{}/train/'.format(data_name)
         test_dir = './data/{}/test/'.format(data_name)
-        transform = transforms.Compose([transforms.ToTensor(),
-                                        transforms.Resize((32,32))])
+        transform = transforms.Compose([transforms.Resize((32,32)),
+                                        transforms.ToTensor()])
         train_dataset = datasets.MNIST(root=train_dir, train=True, download=True, transform=transform)
         test_dataset = datasets.MNIST(root=test_dir, train=False, download=True, transform=transform)
         
     elif(data_name=='ImageNet'):
         train_dir = './data/{}/train/'.format(data_name)
         test_dir = './data/{}/validation/'.format(data_name)
-        transform = transforms.Compose([transforms.ToTensor()
+        transform = transforms.Compose([transforms.ToTensor(),
                                         transforms.Lambda(lambda x: extract_channel(x,0))])
         train_dataset = datasets.ImageFolder(
             train_dir, transform)
@@ -34,14 +34,14 @@ def fetch_dataset(data_name):
             test_dir, transform)
     elif(data_name =='Kodak'):
         train_dataset = None
-        transform = transforms.Compose([transforms.ToTensor()
+        transform = transforms.Compose([transforms.ToTensor(),
                                         transforms.Lambda(lambda x: extract_channel(x,0))])
         test_dir = './data/{}/'.format(data_name)
         test_dataset = datasets.ImageFolder(
             test_dir, transform)
     elif(data_name =='UCID'):
         test_dataset = None
-        transform = transforms.Compose([transforms.ToTensor()
+        transform = transforms.Compose([transforms.ToTensor(),
                                         transforms.Lambda(lambda x: extract_channel(x,0))])
         train_dir = './data/{}/'.format(data_name)
         train_dataset = datasets.ImageFolder(
@@ -59,7 +59,7 @@ def split_dataset(train_dataset,test_dataset,data_size,batch_size,num_fold,radom
         train_loader = torch.utils.data.DataLoader(dataset=train_dataset, 
                     batch_size=batch_size, pin_memory=True, sampler=train_sampler)    
         test_loader = torch.utils.data.DataLoader(dataset=test_dataset, 
-            batch_size=1, pin_memory=True)
+            batch_size=batch_size, pin_memory=True)
         return train_loader,test_loader
     elif(num_fold==1):
         train_idx = radomGen.choice(data_idx, size=int(data_size*p), replace=False)
