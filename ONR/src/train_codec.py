@@ -13,7 +13,7 @@ from modelWrapper import *
 cudnn.benchmark = False
 data_name = 'ImageNet'
 model_dir = 'imagenet'
-model_name = 'CAE'
+model_name = 'RCAE'
 TAG = data_name+'_'+model_name
 config.init()
 milestones = config.PARAM['milestones']
@@ -43,15 +43,14 @@ def runExperiment(Experiment_TAG):
     
     train_dataset,_ = fetch_dataset(data_name=data_name)
     _,test_dataset = fetch_dataset(data_name='Kodak')
-    validated_num_epochs = validate_num_epochs(train_dataset)
     validated_num_epochs = max_num_epochs
     
     train_loader,test_loader = split_dataset(train_dataset,test_dataset,data_size,batch_size=1,num_fold=0,radomGen=randomGen)
     print('Training data size {}, Test data size {}'.format(len(train_loader),len(test_dataset)))
     model = eval('models.{}.{}().to(device)'.format(model_dir,model_name))
-    summary(model.to('cuda'), input_size=(1, 128, 128))
+    summary(model.to('cuda'), input_size=(1, patch_shape[0], patch_shape[1]))
     model = model.to(device)
-    criterion = nn.MSELoss().to(device)
+    criterion = nn.CrossEntropyLoss().to(device)
     mw = modelWrapper(model,config.PARAM['optimizer_name'])
     mw.set_optimizer_param(config.PARAM['optimizer_param'])
     mw.set_criterion(criterion)
@@ -73,26 +72,6 @@ def runExperiment(Experiment_TAG):
         save({'model_dict':mw.model.state_dict(),'optimizer_dict':mw.optimizer.state_dict()},'./output/model/{}.pkl'.format(Experiment_TAG))  
         save(result,'./output/result/{}.pkl'.format(Experiment_TAG))        
     return result
-
-def validate_num_epochs(train_dataset):
-    train_loader,validation_loader = split_dataset(train_dataset,None,data_size,1,1,radomGen=randomGen)
-    model = eval('models.{}.{}().to(device)'.format(model_dir,model_name))
-    criterion = nn.MSELoss().to(device)
-    mw = modelWrapper(model,config.PARAM['optimizer_name'])
-    mw.set_optimizer_param(config.PARAM['optimizer_param'])
-    mw.set_criterion(criterion)
-    mw.set_optimizer()
-    hyper_test_psnr = torch.zeros(max_num_epochs,device=device)
-    scheduler = MultiStepLR(mw.optimizer, milestones=milestones, gamma=gamma)
-    for epoch in range(max_num_epochs):
-        scheduler.step()
-        train_result = train(train_loader[0],mw)
-        test_result = test(validation_loader[0],mw)
-        print_result(epoch,train_result,test_result)
-        hyper_test_psnr[epoch] = test_result[3].avg
-    validated_num_epochs = torch.argmax(hyper_test_psnr) + 1
-    print('Validated Number of Epoch: {}'.format(validated_num_epochs))
-    return validated_num_epochs
     
 def train(train_loader,mw,epoch):
     batch_time = Meter()
@@ -100,29 +79,28 @@ def train(train_loader,mw,epoch):
     patch_size = Meter()
     losses = Meter()
     psnrs = Meter()
+    accs = Meter()
     mw.model.train()
     end = time.time()
-    for i, (input, _) in enumerate(train_loader):
-        patches = extract_patches_2D(input,patch_shape)
-        patch_dataset = torch.utils.data.TensorDataset(patches)
-        patch_loader = torch.utils.data.DataLoader(dataset=patch_dataset, batch_size=batch_size, pin_memory=True)
-        for j, (patch,) in enumerate(patch_loader):
-            patch = patch.to(device)
-            data_time.update(time.time() - end)
-            patch_size.update(patch.size(0))
-            output = mw.model(patch)
-            loss = mw.loss(output,patch)
-            psnr = PSNR(patch,output)
-            losses.update(loss.item(), patch.size(0))
-            psnrs.update(psnr.item(), patch.size(0))
-            mw.optimizer.zero_grad()
-            loss.backward()
-            mw.optimizer.step()
-            batch_time.update(time.time() - end)
-            end = time.time()
-        if i % (len(train_loader)//5) == 0:
-            print('Train Epoch: {}[({:.0f}%)]\tLoss: {:.6f}\tPNSR: {:.3f}'.format(
-                epoch, 100. * i / len(train_loader), loss.item(), psnr.item()))
+    for i, (input, target) in enumerate(train_loader):
+        input = input.to(device)
+        data_time.update(time.time() - end)
+        input_size.update(input.size(0))
+        output = mw.model(input)
+        loss = mw.loss(output,target)
+        psnr = PSNR(output[0],input)
+        #acc = mw.acc
+        losses.update(loss.item(), input_size.size(0))
+        psnrs.update(psnr.item(), input_size(0))
+        accs.update(acc.item())
+        mw.optimizer.zero_grad()
+        loss.backward()
+        mw.optimizer.step()
+        batch_time.update(time.time() - end)
+        end = time.time()
+    if i % (len(train_loader)//5) == 0:
+        print('Train Epoch: {}[({:.0f}%)]\tLoss: {:.6f}\tPNSR: {:.3f}'.format(
+            epoch, 100. * i / len(train_loader), loss.item(), psnr.item()))
     return batch_time,data_time,patch_size,losses,psnrs
   
     
@@ -135,25 +113,21 @@ def test(validation_loader,mw,epoch):
     mw.model.eval()
     with torch.no_grad():
         end = time.time()
-        for i, (input, _) in enumerate(validation_loader):
-            patches = extract_patches_2D(input,patch_shape)
-            patch_dataset = torch.utils.data.TensorDataset(patches)
-            patch_loader = torch.utils.data.DataLoader(dataset=patch_dataset, batch_size=batch_size, pin_memory=True)
-            for j, (patch,) in enumerate(patch_loader):
-                patch = patch.to(device)
-                data_time.update(time.time() - end)
-                output = mw.model(patch)
-                loss = mw.loss(output,patch)
-                psnr = PSNR(patch,output)
-                losses.update(loss.item(), patch.size(0))
-                psnrs.update(psnr.item(), patch.size(0))
-                batch_time.update(time.time() - end)
-                end = time.time()
-            if epoch % 3 == 0:
-                nrow = int(np.ceil(float(input.size(3))/patch_shape[1]))
-                if not os.path.exists('.{}/image_{}.png'.format(output_dir,i)):
-                    save_img(patches,'{}/image_{}.png'.format(output_dir,i),nrow)
-                save_img(output,'{}/image_{}_{}.png'.format(output_dir,i,epoch),nrow)
+        for i, (input, target) in enumerate(validation_loader):
+            input = input.to(device)
+            data_time.update(time.time() - end)
+            output = mw.model(input)
+            loss = mw.loss(output,target)
+            psnr = PSNR(output[0],input)
+            losses.update(loss.item(), input.size(0))
+            psnrs.update(psnr.item(), input.size(0))
+            batch_time.update(time.time() - end)
+            end = time.time()
+        if epoch % 3 == 0:
+            nrow = int(np.ceil(float(input.size(3))/patch_shape[1]))
+            if not os.path.exists('.{}/image_{}.png'.format(output_dir,i)):
+                save_img(patches,'{}/image_{}.png'.format(output_dir,i),nrow)
+            save_img(output,'{}/image_{}_{}.png'.format(output_dir,i,epoch),nrow)
     return batch_time,data_time,losses,psnrs
 
 

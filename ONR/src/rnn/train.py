@@ -221,7 +221,6 @@ for epoch in range(last_epoch, args.max_epochs + 1):
             cur_losses.append(res.abs().mean())
 
         bp_t1 = time.time()
-        tmp = nn.MSELoss()
         loss = sum(cur_losses) / args.iterations
         psnr = PSNR(image,data)
         losses.update(loss.item(), data.size(0))

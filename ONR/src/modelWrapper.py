@@ -47,8 +47,7 @@ class modelWrapper:
         return free_parameters
     
     def loss(self,output,target):
-        #loss = self.criterion(input,output[1]) + self.norm1_lagrange*output[0].norm(p=1)
-        loss = self.criterion(output,target)
+        loss = self.criterion(output[1],target) + output[2]
         return loss
         
     def acc(self,output,target,topk=(1,)):

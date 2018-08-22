@@ -5,21 +5,7 @@ from torch.autograd import Variable
 from torch.nn.modules.utils import _pair
 
 
-class ConvRNNCellBase(nn.Module):
-    def __repr__(self):
-        s = (
-            '{name}({input_channels}, {hidden_channels}, kernel_size={kernel_size}'
-            ', stride={stride}')
-        if self.padding != (0, ) * len(self.padding):
-            s += ', padding={padding}'
-        if self.dilation != (1, ) * len(self.dilation):
-            s += ', dilation={dilation}'
-        s += ', hidden_kernel_size={hidden_kernel_size}'
-        s += ')'
-        return s.format(name=self.__class__.__name__, **self.__dict__)
-
-
-class ConvLSTMCell(ConvRNNCellBase):
+class ConvLSTMCell(nn.Module):
     def __init__(self,
                  input_channels,
                  hidden_channels,
