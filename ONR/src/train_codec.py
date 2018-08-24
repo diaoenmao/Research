@@ -10,7 +10,7 @@ from util import *
 from modelWrapper import *
 
 
-cudnn.benchmark = False
+cudnn.benchmark = True
 data_name = 'MNIST'
 model_dir = 'mnist'
 model_name = 'CAE'

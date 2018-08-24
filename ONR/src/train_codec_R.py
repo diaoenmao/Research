@@ -11,8 +11,8 @@ from modelWrapper import *
 
 
 cudnn.benchmark = False
-data_name = 'MNIST'
-model_dir = 'mnist'
+data_name = 'CIFAR10'
+model_dir = 'cifar10'
 model_name = 'RCAE'
 TAG = data_name+'_'+model_name
 config.init()
@@ -133,7 +133,7 @@ def test(validation_loader,mw,epoch):
     return batch_time,data_time,losses,psnrs,accs
 
 def print_result(epoch,train_result,test_result):
-    print('Test Epoch: {0}\tLoss: {losses.avg:.4f}\tPSNR: {psnrs.avg:.4f}\tACC: {accs.avg".4f}\tTime: {time.sum}'
+    print('Test Epoch: {0}\tLoss: {losses.avg:.4f}\tPSNR: {psnrs.avg:.4f}\tACC: {accs.avg:.4f}\tTime: {time.sum}'
         .format(epoch,losses=test_result[2],psnrs=test_result[3],accs=test_result[4],time=train_result[0]))
     return
     

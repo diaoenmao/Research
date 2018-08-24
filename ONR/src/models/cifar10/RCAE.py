@@ -11,7 +11,7 @@ class EncoderCell(nn.Module):
         super(EncoderCell, self).__init__()
 
         self.conv = nn.Conv2d(
-            1, 64, kernel_size=3, stride=2, padding=1, bias=False)
+            3, 64, kernel_size=3, stride=2, padding=1, bias=False)
         self.rnn1 = ConvLSTMCell(
             64,
             256,
@@ -102,7 +102,7 @@ class DecoderCell(nn.Module):
             hidden_kernel_size=3,
             bias=False)
         self.conv2 = nn.Conv2d(
-            32, 1, kernel_size=1, stride=1, padding=0, bias=False)
+            32, 3, kernel_size=1, stride=1, padding=0, bias=False)
 
     def forward(self, x, hidden1, hidden2, hidden3, hidden4):
         x = self.conv1(x)
@@ -136,7 +136,7 @@ class RCAE(nn.Module):
         self.decoder = DecoderCell()
         
     def compression_loss_fn(self,output,target):
-        res = (output-target).pow(2).mean()
+        res = (output-target).abs().mean()
         return res
         
     def init_hidden(self, batch_size):

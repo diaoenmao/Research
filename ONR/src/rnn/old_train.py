@@ -3,6 +3,7 @@ import os
 import argparse
 
 import numpy as np
+
 import torch
 import torch.optim as optim
 import torch.optim.lr_scheduler as LS
@@ -11,6 +12,7 @@ import torch.nn.functional as F
 from torch.autograd import Variable
 import torch.utils.data as data
 from torchvision import transforms
+import torchvision
 import torch.backends.cudnn as cudnn
 from data import *
 from util import *
@@ -29,16 +31,15 @@ parser.add_argument(
     '--iterations', type=int, default=16, help='unroll iterations')
 parser.add_argument('--checkpoint', type=int, help='unroll iterations')
 args = parser.parse_args()
-data_size = 60000
+data_size = 50000
 ## load 32x32 patches from images
-
 seed = 0
 randomGen = np.random.RandomState(seed)
 train_transform = transforms.Compose([
     transforms.RandomCrop((32, 32)),
     transforms.ToTensor(),
 ])
-train_dataset,test_dataset = fetch_dataset(data_name='MNIST')
+train_dataset,test_dataset = fetch_dataset(data_name='CIFAR10')
 train_loader,test_loader = split_dataset(train_dataset,test_dataset,data_size,batch_size=32,num_fold=0,radomGen=randomGen)
 
 print('total images: {}; total batches: {}'.format(
@@ -101,7 +102,7 @@ def save(index, epoch=True):
 
 
 # resume()
-output_dir = './output/img'
+
 scheduler = LS.MultiStepLR(solver, milestones=[3, 10, 20, 50, 100], gamma=0.5)
 
 last_epoch = 0
@@ -110,11 +111,11 @@ if args.checkpoint:
     last_epoch = args.checkpoint
     scheduler.last_epoch = last_epoch - 1
 
-for epoch in range(last_epoch, args.max_epochs + 1):
+for epoch in range(last_epoch + 1, args.max_epochs + 1):
 
     scheduler.step()
 
-    for batch, (data, _) in enumerate(train_loader):
+    for batch, (data,_) in enumerate(train_loader):
         batch_t0 = time.time()
 
         ## init lstm state
@@ -133,7 +134,7 @@ for epoch in range(last_epoch, args.max_epochs + 1):
                        Variable(torch.zeros(data.size(0), 256, 8, 8).cuda()))
         decoder_h_4 = (Variable(torch.zeros(data.size(0), 128, 16, 16).cuda()),
                        Variable(torch.zeros(data.size(0), 128, 16, 16).cuda()))
-        data = torch.cat((data,data,data),1)
+
         patches = Variable(data.cuda())
 
         solver.zero_grad()
@@ -164,67 +165,10 @@ for epoch in range(last_epoch, args.max_epochs + 1):
         solver.step()
 
         batch_t1 = time.time()
+
         if batch % (len(train_loader)//10) == 0:
             print(
                 '[TRAIN] Epoch[{}]({}/{}); Loss: {:.6f}; PSNR: {:.6f}; Backpropagation: {:.4f} sec; Batch: {:.4f} sec'.
                 format(epoch, batch + 1,
                        len(train_loader), loss.item(),psnr.item(), bp_t1 - bp_t0, batch_t1 -
                        batch_t0))
-
-    losses = Meter()
-    psnrs = Meter()
-    for batch, (data, _) in enumerate(test_loader):
-        batch_t0 = time.time()
-
-        ## init lstm state
-        encoder_h_1 = (Variable(torch.zeros(data.size(0), 256, 8, 8).cuda()),
-                       Variable(torch.zeros(data.size(0), 256, 8, 8).cuda()))
-        encoder_h_2 = (Variable(torch.zeros(data.size(0), 512, 4, 4).cuda()),
-                       Variable(torch.zeros(data.size(0), 512, 4, 4).cuda()))
-        encoder_h_3 = (Variable(torch.zeros(data.size(0), 512, 2, 2).cuda()),
-                       Variable(torch.zeros(data.size(0), 512, 2, 2).cuda()))
-
-        decoder_h_1 = (Variable(torch.zeros(data.size(0), 512, 2, 2).cuda()),
-                       Variable(torch.zeros(data.size(0), 512, 2, 2).cuda()))
-        decoder_h_2 = (Variable(torch.zeros(data.size(0), 512, 4, 4).cuda()),
-                       Variable(torch.zeros(data.size(0), 512, 4, 4).cuda()))
-        decoder_h_3 = (Variable(torch.zeros(data.size(0), 256, 8, 8).cuda()),
-                       Variable(torch.zeros(data.size(0), 256, 8, 8).cuda()))
-        decoder_h_4 = (Variable(torch.zeros(data.size(0), 128, 16, 16).cuda()),
-                       Variable(torch.zeros(data.size(0), 128, 16, 16).cuda()))
-        data = torch.cat((data,data,data),1)
-        patches = Variable(data.cuda())
-
-        cur_losses = []
-
-        res = patches - 0.5
-
-        bp_t0 = time.time()
-        image = torch.zeros(data.size(0), 3, 32, 32) + 0.5
-        for _ in range(args.iterations):
-            encoded, encoder_h_1, encoder_h_2, encoder_h_3 = encoder(
-                res, encoder_h_1, encoder_h_2, encoder_h_3)
-
-            codes = binarizer(encoded)
-
-            output, decoder_h_1, decoder_h_2, decoder_h_3, decoder_h_4 = decoder(
-                codes, decoder_h_1, decoder_h_2, decoder_h_3, decoder_h_4)
-            image = image + output.data.cpu()
-            res = res - output
-            cur_losses.append(res.abs().mean())
-
-        bp_t1 = time.time()
-        loss = sum(cur_losses) / args.iterations
-        psnr = PSNR(image,data)
-        losses.update(loss.item(), data.size(0))
-        psnrs.update(psnr.item(), data.size(0))
-        batch_t1 = time.time()
-    if epoch % 3 == 0:
-        if not os.path.exists('.{}/image_{}.png'.format(output_dir,batch)):
-            save_img(data,'{}/image_{}.png'.format(output_dir,batch))
-        save_img(image,'{}/image_{}_{}.png'.format(output_dir,batch,epoch))
-
-    print(
-        '[TEST] Epoch[{}]; Loss: {:.6f}; PSNR: {:.6f}'.
-        format(epoch, losses.avg, psnrs.avg))
-    #save(epoch)

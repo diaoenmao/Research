@@ -22,6 +22,7 @@ image = imread(args.input, mode='RGB')
 image = torch.from_numpy(
     np.expand_dims(
         np.transpose(image.astype(np.float32) / 255.0, (2, 0, 1)), 0))
+print(image.size())
 batch_size, input_channels, height, width = image.size()
 assert height % 32 == 0 and width % 32 == 0
 
