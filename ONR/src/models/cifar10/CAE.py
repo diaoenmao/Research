@@ -144,8 +144,8 @@ class Encoder(nn.Module):
         self.input = InputTransition(32)
         self.down_0 = DownTransition(Conv,32,64,1)
         self.down_1 = DownTransition(Conv,64,64,1)
-        self.down_2 = DownTransition(Conv,64,32,1)    
-        #self.down_3 = DownTransition(Conv,64,32,1)        
+        self.down_2 = DownTransition(Conv,64,64,1)    
+        self.down_3 = DownTransition(Conv,64,32,1)        
         self.quantizer = Quantizer()
 
     def forward(self, x):
@@ -153,7 +153,7 @@ class Encoder(nn.Module):
         x = self.down_0(x)
         x = self.down_1(x)
         x = self.down_2(x)
-        #x = self.down_3(x)
+        x = self.down_3(x)
         x = self.quantizer(x)
         return x
 
@@ -162,15 +162,15 @@ class Decoder(nn.Module):
         super(Decoder, self).__init__()
         self.up_0 = UpTransition(Conv,32,64,1) 
         self.up_1 = UpTransition(Conv,64,64,1)
-        self.up_2 = UpTransition(Conv,64,32,1)
-        #self.up_3 = UpTransition(Conv,64,32,1)
+        self.up_2 = UpTransition(Conv,64,64,1)
+        self.up_3 = UpTransition(Conv,64,32,1)
         self.output = OutputTransition(32)      
 
     def forward(self, x):
         x = self.up_0(x)
         x = self.up_1(x)
         x = self.up_2(x)
-        #x = self.up_3(x)
+        x = self.up_3(x)
         x = self.output(x)
         return x
         
@@ -182,22 +182,25 @@ class CAE(nn.Module):
         self.net = Net()
         self.decoder = Decoder(Basic_Conv)
 
+    def compression_loss_fn(self,output,target):
+        res = (output-target).abs().mean()
+        return res 
         
     def forward(self, input):
         x = self.encoder(input)
         code = self.quantizer(x)
         output = self.net(code)
-        recon_img = self.decoder(x)
-        compression_loss = ((input-recon_img)**2).mean()
-        return [recon_img,output,compression_loss]
+        image = self.decoder(x)
+        compression_loss = self.compression_loss_fn(image,input)
+        return compression_loss,image,output
 
 class Net(nn.Module):
     def __init__(self):
         super(Net, self).__init__()
         self.conv1 = nn.Conv2d(
             32, 128, kernel_size=1, stride=1, padding=0, bias=False)
-        self.fc1 = nn.Linear(2048,512)
-        self.fc2 = nn.Linear(512,10)
+        self.fc1 = nn.Linear(512,128)
+        self.fc2 = nn.Linear(128,10)
         
     def forward(self, input):
         x = F.relu(self.conv1(input))

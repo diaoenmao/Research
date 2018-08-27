@@ -1,7 +1,6 @@
 import torch
-import torchvision
-from torch import nn
-
+import torch.nn as nn
+import torch.nn.functional as F
 from modules import Quantize, Sign
 
 activation_mode='prelu'
@@ -179,16 +178,35 @@ class CAE(nn.Module):
     def __init__(self):
         super(CAE, self).__init__()
         self.encoder = Encoder(Basic_Conv)
-        self.decoder = Decoder(Basic_Conv)
         self.quantizer = Quantizer()
+        self.net = Net()
+        self.decoder = Decoder(Basic_Conv)
+
+    def compression_loss_fn(self,output,target):
+        res = (output-target).abs().mean()
+        return res 
         
-    def forward(self, x):
-        x = self.encoder(x)
-        x = self.quantizer(x)
-        x = self.decoder(x)
+    def forward(self, input):
+        x = self.encoder(input)
+        code = self.quantizer(x)
+        output = self.net(code)
+        image = self.decoder(x)
+        compression_loss = self.compression_loss_fn(image,input)
+        return compression_loss,image,output
+
+class Net(nn.Module):
+    def __init__(self):
+        super(Net, self).__init__()
+        self.conv1 = nn.Conv2d(
+            32, 128, kernel_size=1, stride=1, padding=0, bias=False)
+        self.fc1 = nn.Linear(512,128)
+        self.fc2 = nn.Linear(128,10)
+        
+    def forward(self, input):
+        x = F.relu(self.conv1(input))
+        x = x.view(x.size(0),-1)
+        x = F.relu(self.fc1(x))
+        x = self.fc2(x)
         return x
         
-def cae(**kwargs):
-    model = CAE(**kwargs)
-    return model
     

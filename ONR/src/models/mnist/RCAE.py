@@ -132,11 +132,11 @@ class RCAE(nn.Module):
         self.num_iter = num_iter
         self.encoder = EncoderCell()
         self.binarizer = Binarizer()
-        self.net = Net()
+        self.net = Net(num_iter)
         self.decoder = DecoderCell()
         
     def compression_loss_fn(self,output,target):
-        res = (output-target).pow(2).mean()
+        res = (output-target).abs().mean()
         return res
         
     def init_hidden(self, batch_size):
@@ -155,39 +155,39 @@ class RCAE(nn.Module):
                        torch.zeros(batch_size, 256, 8, 8, device = device))
         decoder_h_4 = (torch.zeros(batch_size, 128, 16, 16, device = device),
                        torch.zeros(batch_size, 128, 16, 16, device = device))
-        self.encoder_h = [encoder_h_1,encoder_h_2,encoder_h_3]
-        self.decoder_h = [decoder_h_1,decoder_h_2,decoder_h_3,decoder_h_4]
-        return self.encoder_h, self.decoder_h
+        encoder_h = [encoder_h_1,encoder_h_2,encoder_h_3]
+        decoder_h = [decoder_h_1,decoder_h_2,decoder_h_3,decoder_h_4]
+        return encoder_h, decoder_h
                        
     def forward(self, x, hidden=None):
         if(hidden is None):
-            self.init_hidden(x.size(0))
+            self.encoder_h,self.decoder_h = self.init_hidden(x.size(0))
         else:
-            self.encoder_h,self.deoder_h = hidden[0],hidden[1]
-        recon_img = x.new_zeros(x.size())
+            self.encoder_h,self.decoder_h = hidden[0],hidden[1]
         res = []
         codes = []
-        for _ in range(self.num_iter):
+        image = x.new_zeros(x.size())
+        for i in range(self.num_iter):
             encoded_x, self.encoder_h[0], self.encoder_h[1], self.encoder_h[2] = self.encoder(
                     x, self.encoder_h[0], self.encoder_h[1], self.encoder_h[2])
             code = self.binarizer(encoded_x)
-            decoded_x, decoder_h_1, decoder_h_2, decoder_h_3, decoder_h_4 = self.decoder(
+            decoded_x, self.decoder_h[0], self.decoder_h[1], self.decoder_h[2], self.decoder_h[3] = self.decoder(
                 code, self.decoder_h[0], self.decoder_h[1], self.decoder_h[2], self.decoder_h[3])
+            image = image + decoded_x
             res.append(self.compression_loss_fn(decoded_x,x))
             codes.append(code)
-            recon_img = recon_img + decoded_x
             x = x - decoded_x
-        codes = torch.cat(codes,1)
-        output = self.net(codes)
         compression_loss = sum(res)/self.num_iter
-        return [recon_img,output,compression_loss]
+        code = torch.cat(codes,1)
+        output = self.net(code)
+        return compression_loss,image,output
     
     
 class Net(nn.Module):
-    def __init__(self):
+    def __init__(self,num_iter):
         super(Net, self).__init__()
         self.conv1 = nn.Conv2d(
-            512, 128, kernel_size=1, stride=1, padding=0, bias=False)
+            num_iter*32, 128, kernel_size=1, stride=1, padding=0, bias=False)
         self.fc1 = nn.Linear(512,128)
         self.fc2 = nn.Linear(128,10)
         

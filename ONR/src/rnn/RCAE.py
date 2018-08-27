@@ -132,7 +132,7 @@ class RCAE(nn.Module):
         self.num_iter = num_iter
         self.encoder = EncoderCell()
         self.binarizer = Binarizer()
-        self.net = Net(num_iter)
+        self.net = Net()
         self.decoder = DecoderCell()
         
     def compression_loss_fn(self,output,target):
@@ -177,17 +177,17 @@ class RCAE(nn.Module):
             res.append(self.compression_loss_fn(decoded_x,x))
             codes.append(code)
             x = x - decoded_x
-        compression_loss = sum(res)/self.num_iter
+        loss = sum(res)/self.num_iter
         code = torch.cat(codes,1)
         output = self.net(code)
-        return compression_loss,image,output
+        return loss,image,output
     
     
 class Net(nn.Module):
-    def __init__(self,num_iter):
+    def __init__(self):
         super(Net, self).__init__()
         self.conv1 = nn.Conv2d(
-            num_iter*32, 128, kernel_size=1, stride=1, padding=0, bias=False)
+            512, 128, kernel_size=1, stride=1, padding=0, bias=False)
         self.fc1 = nn.Linear(512,128)
         self.fc2 = nn.Linear(128,10)
         
