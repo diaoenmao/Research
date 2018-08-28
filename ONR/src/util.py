@@ -132,7 +132,7 @@ def PIL_to_CV2(pil_img):
     cv2_img = cv2.cvtColor(np.array(pil_img), cv2.COLOR_RGB2BGR)
     return cv2_img
     
-def CV2_to_PIL():
+def CV2_to_PIL(cv2_img):
     cv2_img = cv2.cvtColor(cv2_img,cv2.COLOR_BGR2RGB)
     pil_img = Image.fromarray(cv2_img)
     return pil_img
@@ -250,7 +250,7 @@ def PSNR(output,target,max=1.0):
     return psnr
     
 def BPP(code,num_pixel):    
-    return 8*code.numel()/num_pixel
+    return 8*code.nbytes/num_pixel
 
 def ACC(output,target,topk):  
     with torch.no_grad():
@@ -268,20 +268,13 @@ def ACC(output,target,topk):
             else:
                 acc.append(1.0)
     return acc
+
 	
 # ===================Figure===================== 
 def plt_dist(x):
     plt.figure()
     plt.hist(x)
     plt.show()
-
-def plt_result(seed):
-    best = load('./output/model/best_{}.pth'.format(seed))
-    best_prec1 = best['best_prec1']
-    best_epoch = best['best_epoch']
-    train_result,test_result,_ = load('./output/result/{}_{}_{}'.format(TAG,seed,best_epoch))
-    plt_meter([train_result,test_result],['train','test'],'{}_{}_{}'.format(TAG,seed,best_epoch))
-    return
     
 def plt_meter(Meters,names,TAG):
     colors = ['r','b']
@@ -294,9 +287,3 @@ def plt_meter(Meters,names,TAG):
         if not os.path.exists('./output/fig/{}'.format(names[i])):
             os.makedirs('./output/fig/{}'.format(names[i]), exist_ok=True) 
         fig.savefig('./output/fig/{}/{}'.format(names[i],TAG), dpi=fig.dpi)
-
-def show(img): 
-    npimg = img.cpu().numpy()
-    plt.imshow(npimg, interpolation='nearest')
-    # plt.imshow(np.transpose(npimg, (1,2,0)), interpolation='nearest')
-    plt.show()

@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import numpy as np
 import config
 from modules import ConvLSTMCell, Sign
 config.init()
@@ -132,12 +133,43 @@ class RCAE(nn.Module):
         self.num_iter = num_iter
         self.encoder = EncoderCell()
         self.binarizer = Binarizer()
-        self.net = Net(num_iter)
+        self.net = Net()
         self.decoder = DecoderCell()
         
     def compression_loss_fn(self,output,target):
         res = (output-target).abs().mean()
         return res
+
+    def encode(self, x, hidden=None):
+        if(hidden is None):
+            self.encoder_h,self.decoder_h = self.init_hidden(x.size(0))
+        else:
+            self.encoder_h,self.decoder_h = hidden[0],hidden[1]
+        codes = []
+        image = x.new_zeros(x.size())
+        for i in range(self.num_iter):
+            encoded_x, self.encoder_h[0], self.encoder_h[1], self.encoder_h[2] = self.encoder(
+                    x, self.encoder_h[0], self.encoder_h[1], self.encoder_h[2])
+            code = self.binarizer(encoded_x)
+            decoded_x, self.decoder_h[0], self.decoder_h[1], self.decoder_h[2], self.decoder_h[3] = self.decoder(
+                code, self.decoder_h[0], self.decoder_h[1], self.decoder_h[2], self.decoder_h[3])
+            image = image + decoded_x
+            codes.append(code)
+            x = x - decoded_x
+        return codes
+    
+    def decode(self, codes, batch_size, hidden=None):
+        if(hidden is None):
+            self.encoder_h,self.decoder_h = self.init_hidden(batch_size)
+        else:
+            self.encoder_h,self.decoder_h = hidden[0],hidden[1]
+ 
+        image = torch.zeros(batch_size, 1, 32, 32, device=device)
+        for i in range(min(self.num_iter, len(codes))):
+            decoded_x, self.decoder_h[0], self.decoder_h[1], self.decoder_h[2], self.decoder_h[3] = self.decoder(
+                codes[i], self.decoder_h[0], self.decoder_h[1], self.decoder_h[2], self.decoder_h[3])
+            image = image + decoded_x
+        return image
         
     def init_hidden(self, batch_size):
         encoder_h_1 = (torch.zeros(batch_size, 256, 8, 8, device = device),
@@ -184,7 +216,7 @@ class RCAE(nn.Module):
     
     
 class Net(nn.Module):
-    def __init__(self,num_iter):
+    def __init__(self,num_iter=16):
         super(Net, self).__init__()
         self.conv1 = nn.Conv2d(
             num_iter*32, 128, kernel_size=1, stride=1, padding=0, bias=False)

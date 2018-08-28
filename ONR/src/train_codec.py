@@ -66,11 +66,11 @@ def runExperiment(Experiment_TAG):
             if(best_pivot>test_result[2].avg):
                 best_pivot = test_result[2].avg if best_pivot>test_result[2].avg else best_pivot
                 save({'epoch':epoch+1,'model_dict':model.state_dict(),'optimizer_dict':optimizer.state_dict(),'scheduler_dict': scheduler.state_dict()},'./output/model/{}_best.pkl'.format(Experiment_TAG))
-                save({'test_loss':test_result[2].avg,'test_psnr':test_result[3].avg,'test_acc':test_result[4].avg,'timing':train_result[0].avg},'./output/result/{}_best.pkl.pkl'.format(Experiment_TAG))
+                save({'test_loss':test_result[2].avg,'test_psnr':test_result[3].avg,'test_acc':test_result[4].avg,'timing':train_result[0].avg},'./output/result/{}_best.pkl'.format(Experiment_TAG))
     if(save_mode>0):
         save({'epoch':epoch+1,'model_dict':model.state_dict(),'optimizer_dict':optimizer.state_dict(),'scheduler_dict': scheduler.state_dict()},'./output/model/{}_final.pkl'.format(Experiment_TAG))  
         save({'test_loss':test_result[2].avg,'test_psnr':test_result[3].avg,'test_acc':test_result[4].avg,'timing':train_result[0].avg},'./output/result/{}_final.pkl'.format(Experiment_TAG))        
-    return result
+    return
     
 def train(train_loader,model,criterion,optimizer,epoch):
     batch_time = Meter()
@@ -85,8 +85,8 @@ def train(train_loader,model,criterion,optimizer,epoch):
         target = target.to(device)
         data_time.update(time.time() - end)
         output = model(input)
-        #loss = output[0] + 1e-3*criterion(output[2],target)
-        loss = output[0]
+        loss = output[0] + 1e-3*criterion(output[2],target)
+        #loss = output[0]
         psnr = PSNR(output[1],input)
         acc = ACC(output[2],target,topk=(1,))
         losses.update(loss.item(), input.size(0))
@@ -104,7 +104,6 @@ def train(train_loader,model,criterion,optimizer,epoch):
   
     
 def test(validation_loader,model,criterion,epoch):
-    output_dir = './output/img'
     batch_time = Meter()
     data_time = Meter()
     losses = Meter()
@@ -118,8 +117,8 @@ def test(validation_loader,model,criterion,epoch):
             target = target.to(device)
             data_time.update(time.time() - end)
             output = model(input)
-            #loss = output[0] + criterion(output[2],target)
-            loss = output[0]
+            loss = output[0] + 1e-3*criterion(output[2],target)
+            #loss = output[0]
             psnr = PSNR(output[1],input)
             acc = ACC(output[2],target,topk=(1,))
             losses.update(loss.item(), input.size(0))
@@ -128,9 +127,9 @@ def test(validation_loader,model,criterion,epoch):
             batch_time.update(time.time() - end)
             end = time.time()
         if epoch % 3 == 0:
-            if not os.path.exists('.{}/image_{}.png'.format(output_dir,i)):
-                save_img(input,'{}/image_{}.png'.format(output_dir,i))
-            save_img(output[1],'{}/image_{}_{}.png'.format(output_dir,i,epoch))
+            if not os.path.exists('./output/img/image_{}.png'.format(i)):
+                save_img(input,'./output/img/image_{}.png'.format(i))
+            save_img(output[1],'./output/img/image_{}_{}.png'.format(i,epoch))
     return batch_time,data_time,losses,psnrs,accs
 
 def print_result(epoch,train_result,test_result):
@@ -141,13 +140,13 @@ def print_result(epoch,train_result,test_result):
 def resume(model,optimizer,scheduler,Experiment_TAG):
     if(os.path.exists('./output/model/{}_checkpoint.pkl'.format(Experiment_TAG))):
         checkpoint = load('./output/model/{}_checkpoint.pkl'.format(Experiment_TAG))
-        last_epoch = checkpoint['last_epoch']
+        last_epoch = checkpoint['epoch']
         model.load_state_dict(checkpoint['model_dict'])
         optimizer.load_state_dict(checkpoint['optimizer_dict'])
         scheduler.load_state_dict(checkpoint['scheduler_dict'])
     else:
         last_epoch = 0
     return last_epoch,model,optimizer,scheduler
-        
+    
 if __name__ == "__main__":
     main()    

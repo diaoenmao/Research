@@ -1,38 +1,30 @@
+import torch
 import numpy as np
-import torchvision.transforms as transforms
-from util import *
+
 
 class Codec():
-    def __init__(model):
+    def __init__(self,model,device):
         self.model = model
         self.model.eval()
-        self._transform = transforms.Compose([
-                transforms.Lambda(lambda x: RGB_to_YCbCr(x)),
-                transforms.ToTensor()
-            ])     
-        self._detransform =  transforms.Compose([
-            transforms.ToPILImage(),
-            transforms.Lambda(lambda x: YCbCr_to_RGB(x))
-        ])
+        self.device = device
         
-    def transform(self, x):
-        transformed_x = self._transform(x)
-        return transformed_x
-        
-    def detransform(self, decoded_x):
-        detransformed_x = self._detransform(decoded_x)
-        return detransformed_x
-    
-    def entropy_code(self,code):
-        return
-        
-    def entropy_decode(self,entropy_code):
-        return
-        
-    def encode(self, x):
-        code = self.model.code(x)
+    def entropy_encode(self,code):
+        code = (np.stack(code).astype(np.int8) + 1) // 2
+        code = np.packbits(code.reshape(-1))
         return code
         
-    def decode(self, code):
-        decoded_x = self.model.decode(code)
+    def entropy_decode(self,code,batch_size):
+        code = np.unpackbits(code)
+        code = np.reshape(code, (-1,batch_size,32,2,2)).astype(np.float32) * 2 - 1
+        code = torch.from_numpy(code).to(device)
+        return code
+        
+    def encode(self, x):
+        code = self.model.encode(x)
+        code = self.entropy_encode(code)
+        return code
+        
+    def decode(self,code,batch_size):
+        code = self.entropy_decode(code,batch_size)
+        decoded_x = self.model.decoder(code,batch_size)
         return decoded_x    

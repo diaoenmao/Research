@@ -13,13 +13,14 @@ from util import *
 
 seed = 1234
 
-def fetch_dataset(data_name):
+def fetch_dataset(data_name,transform=None):
     print('fetching data {}...'.format(data_name))
     if(data_name=='MNIST'):
         train_dir = './data/{}/train/'.format(data_name)
         test_dir = './data/{}/test/'.format(data_name)
-        transform = transforms.Compose([transforms.Resize((32,32)),
-                                        transforms.ToTensor()])
+        if(transform is None):
+            transform = transforms.Compose([transforms.Resize((32,32)),
+                                            transforms.ToTensor()])            
         train_dataset = datasets.MNIST(root=train_dir, train=True, download=True, transform=transform)
         test_dataset = datasets.MNIST(root=test_dir, train=False, download=True, transform=transform)
         
