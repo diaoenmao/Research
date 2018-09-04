@@ -64,13 +64,11 @@ def runExperiment(Experiment_TAG):
             cur_input_feature_idx = input_feature_idx[model_id[j]]
 
             model = eval('models.{}.{}(input_feature={},output_feature={}).to(device)'.format(model_dir,model_name,cur_input_feature_idx.shape[0],output_feature))
+            optimizer = optim.Adam(model.parameters(),lr=5e-4)
+            scheduler = MultiStepLR(optimizer, milestones=milestones, gamma=gamma)
             criterion = nn.CrossEntropyLoss().to(device)
-            mw = modelWrapper(model,config.PARAM['optimizer_name'])
-            mw.set_optimizer_param(config.PARAM['optimizer_param'])
-            mw.set_criterion(criterion)
-            mw.set_optimizer()
                 
-            scheduler = MultiStepLR(mw.optimizer, milestones=milestones, gamma=0.1)
+            scheduler = MultiStepLR(optimizer, milestones=milestones, gamma=0.1)
             for epoch in range(max_num_epochs):
                 scheduler.step()
                 train_result = train(train_loader,mw,cur_input_feature_idx)
