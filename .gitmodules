@@ -4,3 +4,6 @@
 [submodule "Limit-of-Learning"]
 	path = Limit-of-Learning
 	url = https://github.com/dem123456789/Limit-of-Learning.git
+[submodule "Codec"]
+	path = Codec
+	url = https://github.com/dem123456789/Codec.git
