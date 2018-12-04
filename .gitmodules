@@ -1,3 +1,6 @@
 [submodule "Multimodality"]
 	path = Multimodality
 	url = https://github.com/dem123456789/Multimodality.git
+[submodule "Limit-of-Learning"]
+	path = Limit-of-Learning
+	url = https://github.com/dem123456789/Limit-of-Learning.git
