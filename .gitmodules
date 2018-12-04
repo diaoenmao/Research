@@ -10,3 +10,6 @@
 [submodule "Organic"]
 	path = Organic
 	url = https://github.com/dem123456789/Organic.git
+[submodule "Wheat"]
+	path = Wheat
+	url = https://github.com/dem123456789/Wheat.git
