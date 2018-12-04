@@ -7,3 +7,6 @@
 [submodule "Codec"]
 	path = Codec
 	url = https://github.com/dem123456789/Codec.git
+[submodule "Organic"]
+	path = Organic
+	url = https://github.com/dem123456789/Organic.git
