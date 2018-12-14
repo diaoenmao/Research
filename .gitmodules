@@ -7,8 +7,8 @@
 [submodule "Codec"]
 	path = Codec
 	url = https://github.com/dem123456789/Codec.git
-[submodule "Organic"]
-	path = Organic
+[submodule "Hierarchical-Classification"]
+	path = Hierarchical-Classification
 	url = https://github.com/dem123456789/Organic.git
 [submodule "Wheat"]
 	path = Wheat
