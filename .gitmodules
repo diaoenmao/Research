@@ -10,3 +10,9 @@
 [submodule "Wheat"]
 	path = Wheat
 	url = https://github.com/dem123456789/Wheat.git
+[submodule "Hierarchical-Classification"]
+	path = Hierarchical-Classification
+	url = https://github.com/dem123456789/Hierarchical-Classification.git
+[submodule "Organic"]
+	path = Organic
+	url = https://github.com/dem123456789/Organic.git
