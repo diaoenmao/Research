@@ -16,3 +16,6 @@
 [submodule "Organic"]
 	path = Organic
 	url = https://github.com/dem123456789/Organic.git
+[submodule "Deep-Learning-Clustering"]
+	path = Deep-Learning-Clustering
+	url = https://github.com/dem123456789/Deep-Learning-Clustering.git
