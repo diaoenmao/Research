@@ -22,3 +22,6 @@
 [submodule "Decentralized-Perception"]
 	path = Decentralized-Perception
 	url = https://github.com/dem123456789/Decentralized-Perception.git
+[submodule "Grow-When-Required"]
+	path = Grow-When-Required
+	url = https://github.com/dem123456789/Grow-When-Required.git
