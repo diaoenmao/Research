@@ -25,3 +25,6 @@
 [submodule "Grow-When-Required"]
 	path = Grow-When-Required
 	url = https://github.com/dem123456789/Grow-When-Required.git
+[submodule "Speech-Emotion-Analysis"]
+	path = Speech-Emotion-Analysis
+	url = https://github.com/dem123456789/Speech-Emotion-Analysis.git
