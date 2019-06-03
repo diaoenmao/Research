@@ -28,3 +28,12 @@
 [submodule "Speech-Emotion-Analysis"]
 	path = Speech-Emotion-Analysis
 	url = https://github.com/dem123456789/Speech-Emotion-Analysis.git
+[submodule "Few-Shot-Learning"]
+	path = Few-Shot-Learning
+	url = https://github.com/dem123456789/Few-Shot-Learning.git
+[submodule "Deep-Channel-Coding"]
+	path = Deep-Channel-Coding
+	url = https://github.com/dem123456789/Deep-Channel-Coding.git
+[submodule "Deep-Fractal-Neural-Network"]
+	path = Deep-Fractal-Neural-Network
+	url = https://github.com/dem123456789/Deep-Fractal-Neural-Network.git
