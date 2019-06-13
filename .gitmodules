@@ -37,3 +37,6 @@
 [submodule "Deep-Fractal-Neural-Network"]
 	path = Deep-Fractal-Neural-Network
 	url = https://github.com/dem123456789/Deep-Fractal-Neural-Network.git
+[submodule "Restricted-Recurrent-Neural-Networks"]
+	path = Restricted-Recurrent-Neural-Networks
+	url = https://github.com/dem123456789/Restricted-Recurrent-Neural-Networks.git
