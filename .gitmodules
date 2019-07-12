@@ -40,3 +40,6 @@
 [submodule "Restricted-Recurrent-Neural-Networks"]
 	path = Restricted-Recurrent-Neural-Networks
 	url = https://github.com/dem123456789/Restricted-Recurrent-Neural-Networks.git
+[submodule "Neural-Network-on-Finite-Field"]
+	path = Neural-Network-on-Finite-Field
+	url = https://github.com/dem123456789/Neural-Network-on-Finite-Field.git
