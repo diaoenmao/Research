@@ -40,3 +40,6 @@
 [submodule "Neural-Network-on-Finite-Field"]
 	path = Neural-Network-on-Finite-Field
 	url = https://github.com/dem123456789/Neural-Network-on-Finite-Field.git
+[submodule "Deep-Source-Coding"]
+	path = Deep-Source-Coding
+	url = https://github.com/dem123456789/Deep-Source-Coding.git
