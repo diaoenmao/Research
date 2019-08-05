@@ -43,3 +43,6 @@
 [submodule "Deep-Source-Coding"]
 	path = Deep-Source-Coding
 	url = https://github.com/dem123456789/Deep-Source-Coding.git
+[submodule "Deep-Model-Compression"]
+	path = Deep-Model-Compression
+	url = https://github.com/dem123456789/Deep-Model-Compression.git
