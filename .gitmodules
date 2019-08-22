@@ -46,3 +46,6 @@
 [submodule "Deep-Model-Compression"]
 	path = Deep-Model-Compression
 	url = https://github.com/dem123456789/Deep-Model-Compression.git
+[submodule "Conditional-Image-Generation-with-Recursive-Convolutional-Neural-Networks"]
+	path = Conditional-Image-Generation-with-Recursive-Convolutional-Neural-Networks
+	url = https://github.com/dem123456789/Conditional-Image-Generation-with-Recursive-Convolutional-Neural-Networks.git
