@@ -49,3 +49,6 @@
 [submodule "Autoregressive-Image-Generation"]
 	path = Autoregressive-Image-Generation
 	url = https://github.com/dem123456789/Autoregressive-Image-Generation.git
+[submodule "Distributed-Audio-Compression"]
+	path = Distributed-Audio-Compression
+	url = https://github.com/dem123456789/Distributed-Audio-Compression.git
