@@ -43,3 +43,9 @@
 [submodule "Deep-Model-Compression"]
 	path = Deep-Model-Compression
 	url = https://github.com/dem123456789/Deep-Model-Compression.git
+[submodule "Distributed-Recurrent-Autoencoder-for-Scalable-Image-Compression"]
+	path = Distributed-Recurrent-Autoencoder-for-Scalable-Image-Compression
+	url = https://github.com/dem123456789/Distributed-Recurrent-Autoencoder-for-Scalable-Image-Compression.git
+[submodule "Autoregressive-Image-Generation"]
+	path = Autoregressive-Image-Generation
+	url = https://github.com/dem123456789/Autoregressive-Image-Generation.git
