@@ -52,6 +52,3 @@
 [submodule "Distributed-Audio-Compression"]
 	path = Distributed-Audio-Compression
 	url = https://github.com/dem123456789/Distributed-Audio-Compression.git
-[submodule "Few-Shot-Distributed-Compressive-Autoencoder"]
-	path = Few-Shot-Distributed-Compressive-Autoencoder
-	url = https://github.com/dem123456789/Few-Shot-Distributed-Compressive-Autoencoder.git
