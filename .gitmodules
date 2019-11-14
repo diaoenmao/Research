@@ -55,3 +55,6 @@
 [submodule "Federated-Autoencoder"]
 	path = Federated-Autoencoder
 	url = https://github.com/dem123456789/Federated-Autoencoder.git
+[submodule "Smart-Turbulence"]
+	path = Smart-Turbulence
+	url = https://github.com/dem123456789/Smart-Turbulence.git
