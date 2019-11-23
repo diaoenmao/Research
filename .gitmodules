@@ -55,3 +55,9 @@
 [submodule "Smart-Turbulence"]
 	path = Smart-Turbulence
 	url = https://github.com/dem123456789/Smart-Turbulence.git
+[submodule "Federated-Learning-through-Bottleneck"]
+	path = Federated-Learning-through-Bottleneck
+	url = https://github.com/dem123456789/Federated-Learning-through-Bottleneck.git
+[submodule "Restricted-Multimodal-Autoencoder"]
+	path = Restricted-Multimodal-Autoencoder
+	url = https://github.com/dem123456789/Restricted-Multimodal-Autoencoder.git
