@@ -61,3 +61,9 @@
 [submodule "Restricted-Multimodal-Generative-Model"]
 	path = Restricted-Multimodal-Generative-Model
 	url = https://github.com/dem123456789/Restricted-Multimodal-Generative-Model.git
+[submodule "Deep-Adversarial-Attacks-Against-Channel-Coding"]
+	path = Deep-Adversarial-Attacks-Against-Channel-Coding
+	url = https://github.com/dem123456789/Deep-Adversarial-Attacks-Against-Channel-Coding.git
+[submodule "Ultra-personalized-Content-Based-Recommendation-System"]
+	path = Ultra-personalized-Content-Based-Recommendation-System
+	url = https://github.com/dem123456789/Ultra-personalized-Content-Based-Recommendation-System.git
