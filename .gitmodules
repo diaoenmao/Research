@@ -64,3 +64,6 @@
 [submodule "Ultra-personalized-Content-Based-Recommendation-System"]
 	path = Ultra-personalized-Content-Based-Recommendation-System
 	url = https://github.com/dem123456789/Ultra-personalized-Content-Based-Recommendation-System.git
+[submodule "Restricted-Federated-Learning"]
+	path = Restricted-Federated-Learning
+	url = https://github.com/dem123456789/Restricted-Federated-Learning.git
