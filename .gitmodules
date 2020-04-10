@@ -67,3 +67,9 @@
 [submodule "Multimodal-Controller-for-Generative-Models"]
 	path = Multimodal-Controller-for-Generative-Models
 	url = https://github.com/dem123456789/Multimodal-Controller-for-Generative-Models.git
+[submodule "Random-Multimodal-Controller"]
+	path = Random-Multimodal-Controller
+	url = https://github.com/dem123456789/Random-Multimodal-Controller.git
+[submodule "Neural-Wavelet-for-Pitch-Tracking"]
+	path = Neural-Wavelet-for-Pitch-Tracking
+	url = https://github.com/dem123456789/Neural-Wavelet-for-Pitch-Tracking.git
