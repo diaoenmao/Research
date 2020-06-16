@@ -73,3 +73,6 @@
 [submodule "Neural-Wavelet-for-Pitch-Tracking"]
 	path = Neural-Wavelet-for-Pitch-Tracking
 	url = https://github.com/dem123456789/Neural-Wavelet-for-Pitch-Tracking.git
+[submodule "Text-to-Speech-Synthesis"]
+	path = Text-to-Speech-Synthesis
+	url = https://github.com/dem123456789/Text-to-Speech-Synthesis.git
