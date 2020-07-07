@@ -76,3 +76,6 @@
 [submodule "Text-to-Speech-Synthesis"]
 	path = Text-to-Speech-Synthesis
 	url = https://github.com/dem123456789/Text-to-Speech-Synthesis.git
+[submodule "Multimodal-Controlled-Text-Generation"]
+	path = Multimodal-Controlled-Text-Generation
+	url = https://github.com/dem123456789/Multimodal-Controlled-Text-Generation.git
