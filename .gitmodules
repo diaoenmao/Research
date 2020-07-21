@@ -82,6 +82,3 @@
 [submodule "Deep-Hacker"]
 	path = Deep-Hacker
 	url = https://github.com/dem123456789/Deep-Hacker.git
-[submodule "Audio-Generation"]
-	path = Audio-Generation
-	url = https://github.com/dem123456789/Audio-Generation.git
