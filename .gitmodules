@@ -79,3 +79,6 @@
 [submodule "Multimodal-Controlled-Audio-Generation"]
 	path = Multimodal-Controlled-Audio-Generation
 	url = https://github.com/dem123456789/Multimodal-Controlled-Audio-Generation.git
+[submodule "Speech-Emotion-Recognition-with-Dual-Sequence-LSTM-Architecture"]
+	path = Speech-Emotion-Recognition-with-Dual-Sequence-LSTM-Architecture
+	url = https://github.com/dem123456789/Speech-Emotion-Recognition-with-Dual-Sequence-LSTM-Architecture.git
