@@ -88,3 +88,6 @@
 [submodule "Structrual-GAN"]
 	path = Structrual-GAN
 	url = https://github.com/dem123456789/Structrual-GAN.git
+[submodule "Deep-Assisted-Learning"]
+	path = Deep-Assisted-Learning
+	url = https://github.com/dem123456789/Deep-Assisted-Learning.git
