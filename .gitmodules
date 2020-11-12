@@ -89,3 +89,6 @@
 [submodule "Deep-Assisted-Learning"]
 	path = Deep-Assisted-Learning
 	url = https://github.com/dem123456789/Deep-Assisted-Learning.git
+[submodule "Deep-Clustering-of-Compressed-Variational-Embeddings"]
+	path = Deep-Clustering-of-Compressed-Variational-Embeddings
+	url = https://github.com/dem123456789/Deep-Clustering-of-Compressed-Variational-Embeddings.git
