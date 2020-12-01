@@ -92,3 +92,6 @@
 [submodule "Deep-Clustering-of-Compressed-Variational-Embeddings"]
 	path = Deep-Clustering-of-Compressed-Variational-Embeddings
 	url = https://github.com/dem123456789/Deep-Clustering-of-Compressed-Variational-Embeddings.git
+[submodule "Fourier-Turbulence"]
+	path = Fourier-Turbulence
+	url = https://github.com/dem123456789/Fourier-Turbulence.git
