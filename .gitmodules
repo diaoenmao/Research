@@ -89,3 +89,6 @@
 [submodule "Fourier-Turbulence"]
 	path = Fourier-Turbulence
 	url = https://github.com/dem123456789/Fourier-Turbulence.git
+[submodule "Deep-Adversarial-Attacks"]
+	path = Deep-Adversarial-Attacks
+	url = https://github.com/dem123456789/Deep-Adversarial-Attacks.git
