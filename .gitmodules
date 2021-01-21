@@ -92,3 +92,6 @@
 [submodule "Deep-Adversarial-Attacks"]
 	path = Deep-Adversarial-Attacks
 	url = https://github.com/dem123456789/Deep-Adversarial-Attacks.git
+[submodule "SmartQuake"]
+	path = SmartQuake
+	url = https://github.com/dem123456789/SmartQuake.git
