@@ -95,3 +95,6 @@
 [submodule "SIGAN"]
 	path = SIGAN
 	url = https://github.com/dem123456789/SIGAN.git
+[submodule "HeteroFL"]
+	path = HeteroFL
+	url = https://github.com/dem123456789/HeteroFL.git
