@@ -95,3 +95,6 @@
 [submodule "HeteroFL"]
 	path = HeteroFL
 	url = https://github.com/dem123456789/HeteroFL.git
+[submodule "Gradient-Assisted-Learning"]
+	path = Gradient-Assisted-Learning
+	url = https://github.com/dem123456789/Gradient-Assisted-Learning.git
