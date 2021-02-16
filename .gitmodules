@@ -44,9 +44,6 @@
 [submodule "Distributed-Audio-Compression"]
 	path = Distributed-Audio-Compression
 	url = https://github.com/dem123456789/Distributed-Audio-Compression.git
-[submodule "Smart-Turbulence"]
-	path = Smart-Turbulence
-	url = https://github.com/dem123456789/Smart-Turbulence.git
 [submodule "Ultra-personalized-Content-Based-Recommendation-System"]
 	path = Ultra-personalized-Content-Based-Recommendation-System
 	url = https://github.com/dem123456789/Ultra-personalized-Content-Based-Recommendation-System.git
