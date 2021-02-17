@@ -7,16 +7,9 @@
 [submodule "Organic"]
 	path = Organic
 	url = https://github.com/dem123456789/Organic.git
-	url = https://github.com/dem123456789/Deep-Learning-Clustering.git
 [submodule "Fine-Grained-Classification"]
 	path = Fine-Grained-Classification
 	url = https://github.com/dem123456789/Fine-Grained-Classification.git
-[submodule "Grow-When-Required"]
-	path = Grow-When-Required
-	url = https://github.com/dem123456789/Grow-When-Required.git
-[submodule "Few-Shot-Learning"]
-	path = Few-Shot-Learning
-	url = https://github.com/dem123456789/Few-Shot-Learning.git
 [submodule "Deep-Channel-Coding"]
 	path = Deep-Channel-Coding
 	url = https://github.com/dem123456789/Deep-Channel-Coding.git
