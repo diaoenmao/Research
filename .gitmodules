@@ -91,3 +91,6 @@
 [submodule "HeteroFL-Computation-and-Communication-Efficient-Federated-Learning-for-Heterogeneous-Clients"]
 	path = HeteroFL-Computation-and-Communication-Efficient-Federated-Learning-for-Heterogeneous-Clients
 	url = https://github.com/dem123456789/HeteroFL-Computation-and-Communication-Efficient-Federated-Learning-for-Heterogeneous-Clients.git
+[submodule "SemiFL-Communication-Efficient-Semi-Supervised-Federated-Learning-with-Unlabeled-Clients"]
+	path = SemiFL-Communication-Efficient-Semi-Supervised-Federated-Learning-with-Unlabeled-Clients
+	url = https://github.com/dem123456789/SemiFL-Communication-Efficient-Semi-Supervised-Federated-Learning-with-Unlabeled-Clients.git
