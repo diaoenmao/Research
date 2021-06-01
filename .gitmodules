@@ -82,9 +82,6 @@
 [submodule "Gradient-Assisted-Learning"]
 	path = Gradient-Assisted-Learning
 	url = https://github.com/dem123456789/Gradient-Assisted-Learning.git
-[submodule "AnchorFL"]
-	path = AnchorFL
-	url = https://github.com/dem123456789/AnchorFL.git
 [submodule "Dimension-Reduction-of-Turbulent-Flow-Data-with-a-VectorQunatized-Deep-Learning-Framework"]
 	path = Dimension-Reduction-of-Turbulent-Flow-Data-with-a-VectorQunatized-Deep-Learning-Framework
 	url = https://github.com/dem123456789/Dimension-Reduction-of-Turbulent-Flow-Data-with-a-VectorQunatized-Deep-Learning-Framework.git
