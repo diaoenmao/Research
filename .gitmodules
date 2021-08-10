@@ -97,3 +97,6 @@
 [submodule "Transistor-Aging"]
 	path = Transistor-Aging
 	url = https://github.com/dem123456789/Transistor-Aging.git
+[submodule "DAFL-Communication-Efficient-Federated-Domain-Adaptation-with-Unlabeled-Target-Clients"]
+	path = DAFL-Communication-Efficient-Federated-Domain-Adaptation-with-Unlabeled-Target-Clients
+	url = https://github.com/dem123456789/DAFL-Communication-Efficient-Federated-Domain-Adaptation-with-Unlabeled-Target-Clients.git
