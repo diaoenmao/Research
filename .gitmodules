@@ -76,9 +76,6 @@
 [submodule "SmartQuake"]
 	path = SmartQuake
 	url = https://github.com/dem123456789/SmartQuake.git
-[submodule "SIGAN"]
-	path = SIGAN
-	url = https://github.com/dem123456789/SIGAN.git
 [submodule "Gradient-Assisted-Learning"]
 	path = Gradient-Assisted-Learning
 	url = https://github.com/dem123456789/Gradient-Assisted-Learning.git
