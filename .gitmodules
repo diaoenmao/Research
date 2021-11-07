@@ -91,3 +91,6 @@
 [submodule "DAFL-Communication-Efficient-Federated-Domain-Adaptation-with-Unlabeled-Target-Clients"]
 	path = DAFL-Communication-Efficient-Federated-Domain-Adaptation-with-Unlabeled-Target-Clients
 	url = https://github.com/dem123456789/DAFL-Communication-Efficient-Federated-Domain-Adaptation-with-Unlabeled-Target-Clients.git
+[submodule "Privacy-Preserving-Multi-Target-Multi-Domain-Recommender-Systems-with-Assisted-AutoEncoders"]
+	path = Privacy-Preserving-Multi-Target-Multi-Domain-Recommender-Systems-with-Assisted-AutoEncoders
+	url = https://github.com/dem123456789/Privacy-Preserving-Multi-Target-Multi-Domain-Recommender-Systems-with-Assisted-AutoEncoders.git
