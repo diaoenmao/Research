@@ -34,9 +34,6 @@
 [submodule "Distributed-Audio-Compression"]
 	path = Distributed-Audio-Compression
 	url = https://github.com/dem123456789/Distributed-Audio-Compression.git
-[submodule "Ultra-personalized-Content-Based-Recommendation-System"]
-	path = Ultra-personalized-Content-Based-Recommendation-System
-	url = https://github.com/dem123456789/Ultra-personalized-Content-Based-Recommendation-System.git
 [submodule "Multimodal-Controller-for-Generative-Models"]
 	path = Multimodal-Controller-for-Generative-Models
 	url = https://github.com/dem123456789/Multimodal-Controller-for-Generative-Models.git
@@ -67,9 +64,6 @@
 [submodule "Deep-Clustering-of-Compressed-Variational-Embeddings"]
 	path = Deep-Clustering-of-Compressed-Variational-Embeddings
 	url = https://github.com/dem123456789/Deep-Clustering-of-Compressed-Variational-Embeddings.git
-[submodule "Fourier-Turbulence"]
-	path = Fourier-Turbulence
-	url = https://github.com/dem123456789/Fourier-Turbulence.git
 [submodule "Deep-Adversarial-Attacks"]
 	path = Deep-Adversarial-Attacks
 	url = https://github.com/dem123456789/Deep-Adversarial-Attacks.git
