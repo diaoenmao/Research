@@ -94,3 +94,6 @@
 [submodule "Privacy-Preserving-Multi-Target-Multi-Domain-Recommender-Systems-with-Assisted-AutoEncoders"]
 	path = Privacy-Preserving-Multi-Target-Multi-Domain-Recommender-Systems-with-Assisted-AutoEncoders
 	url = https://github.com/dem123456789/Privacy-Preserving-Multi-Target-Multi-Domain-Recommender-Systems-with-Assisted-AutoEncoders.git
+[submodule "Privacy-Preserving-Personalized-Recommender-Systems-with-Federated-AutoEncoders"]
+	path = Privacy-Preserving-Personalized-Recommender-Systems-with-Federated-AutoEncoders
+	url = https://github.com/dem123456789/Privacy-Preserving-Personalized-Recommender-Systems-with-Federated-AutoEncoders.git
