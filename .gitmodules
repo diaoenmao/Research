@@ -73,9 +73,6 @@
 [submodule "Gradient-Assisted-Learning"]
 	path = Gradient-Assisted-Learning
 	url = https://github.com/dem123456789/Gradient-Assisted-Learning.git
-[submodule "Dimension-Reduction-of-Turbulent-Flow-Data-with-a-VectorQunatized-Deep-Learning-Framework"]
-	path = Dimension-Reduction-of-Turbulent-Flow-Data-with-a-VectorQunatized-Deep-Learning-Framework
-	url = https://github.com/dem123456789/Dimension-Reduction-of-Turbulent-Flow-Data-with-a-VectorQunatized-Deep-Learning-Framework.git
 [submodule "DRASIC-Distributed-Recurrent-Autoencoder-for-Scalable-Image-Compression"]
 	path = DRASIC-Distributed-Recurrent-Autoencoder-for-Scalable-Image-Compression
 	url = https://github.com/dem123456789/DRASIC-Distributed-Recurrent-Autoencoder-for-Scalable-Image-Compression.git
