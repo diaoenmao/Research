@@ -100,3 +100,6 @@
 [submodule "Dimension-Reduced-Turbulent-Flow-Data-From-Deep-Vector-Quantizers"]
 	path = Dimension-Reduced-Turbulent-Flow-Data-From-Deep-Vector-Quantizers
 	url = https://github.com/dem123456789/Dimension-Reduced-Turbulent-Flow-Data-From-Deep-Vector-Quantizers.git
+[submodule "Sparsity-Index-for-Deep-Model-Compression"]
+	path = Sparsity-Index-for-Deep-Model-Compression
+	url = https://github.com/dem123456789/Sparsity-Index-for-Deep-Model-Compression.git
