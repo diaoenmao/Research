@@ -103,3 +103,6 @@
 [submodule "Sparsity-Index-for-Deep-Model-Compression"]
 	path = Sparsity-Index-for-Deep-Model-Compression
 	url = https://github.com/dem123456789/Sparsity-Index-for-Deep-Model-Compression.git
+[submodule "Assisted-Supply-Chain-Forecasting"]
+	path = Assisted-Supply-Chain-Forecasting
+	url = https://github.com/dem123456789/Assisted-Supply-Chain-Forecasting.git
