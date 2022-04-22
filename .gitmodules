@@ -106,9 +106,6 @@
 [submodule "Assisted-Supply-Chain-Forecasting"]
 	path = Assisted-Supply-Chain-Forecasting
 	url = https://github.com/dem123456789/Assisted-Supply-Chain-Forecasting.git
-[submodule "SemiFL-WW"]
-	path = SemiFL-WW
-	url = https://github.com/dem123456789/SemiFL-WW.git
 [submodule "Federated-Client-Selection"]
 	path = Federated-Client-Selection
 	url = https://github.com/dem123456789/Federated-Client-Selection.git
