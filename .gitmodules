@@ -109,3 +109,6 @@
 [submodule "Federated-Client-Selection"]
 	path = Federated-Client-Selection
 	url = https://github.com/dem123456789/Federated-Client-Selection.git
+[submodule "Semi-Supervised-Federated-Learing-for-Keyword-Spotting"]
+	path = Semi-Supervised-Federated-Learing-for-Keyword-Spotting
+	url = https://github.com/dem123456789/Semi-Supervised-Federated-Learing-for-Keyword-Spotting.git
