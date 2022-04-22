@@ -112,3 +112,12 @@
 [submodule "Semi-Supervised-Federated-Learing-for-Keyword-Spotting"]
 	path = Semi-Supervised-Federated-Learing-for-Keyword-Spotting
 	url = https://github.com/dem123456789/Semi-Supervised-Federated-Learing-for-Keyword-Spotting.git
+[submodule "Medical-Federated-Learning"]
+	path = Medical-Federated-Learning
+	url = https://github.com/dem123456789/Medical-Federated-Learning.git
+[submodule "Deep-Audio-Signal-Coding"]
+	path = Deep-Audio-Signal-Coding
+	url = https://github.com/dem123456789/Deep-Audio-Signal-Coding.git
+[submodule "Deep-Speech-Emotion-Recognition"]
+	path = Deep-Speech-Emotion-Recognition
+	url = https://github.com/dem123456789/Deep-Speech-Emotion-Recognition.git
