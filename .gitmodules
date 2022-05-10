@@ -121,3 +121,6 @@
 [submodule "Deep-Speech-Emotion-Recognition"]
 	path = Deep-Speech-Emotion-Recognition
 	url = https://github.com/dem123456789/Deep-Speech-Emotion-Recognition.git
+[submodule "Semi-Supervised-Learning"]
+	path = Semi-Supervised-Learning
+	url = https://github.com/dem123456789/Semi-Supervised-Learning.git
