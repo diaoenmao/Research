@@ -124,3 +124,9 @@
 [submodule "Semi-Supervised-Learning"]
 	path = Semi-Supervised-Learning
 	url = https://github.com/dem123456789/Semi-Supervised-Learning.git
+[submodule "DynamicFL"]
+	path = DynamicFL
+	url = https://github.com/dem123456789/DynamicFL.git
+[submodule "Recommender-Systems-with-Autoencoders"]
+	path = Recommender-Systems-with-Autoencoders
+	url = https://github.com/dem123456789/Recommender-Systems-with-Autoencoders.git
