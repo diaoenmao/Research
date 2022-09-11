@@ -130,3 +130,6 @@
 [submodule "Recommender-Systems-with-Autoencoders"]
 	path = Recommender-Systems-with-Autoencoders
 	url = https://github.com/dem123456789/Recommender-Systems-with-Autoencoders.git
+[submodule "AutoAL"]
+	path = AutoAL
+	url = https://github.com/dem123456789/AutoAL.git
