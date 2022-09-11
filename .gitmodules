@@ -133,3 +133,6 @@
 [submodule "AutoAL"]
 	path = AutoAL
 	url = https://github.com/dem123456789/AutoAL.git
+[submodule "RPipe"]
+	path = RPipe
+	url = https://github.com/dem123456789/RPipe.git
