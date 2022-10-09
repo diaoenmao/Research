@@ -70,18 +70,12 @@
 [submodule "SmartQuake"]
 	path = SmartQuake
 	url = https://github.com/dem123456789/SmartQuake.git
-[submodule "Gradient-Assisted-Learning"]
-	path = Gradient-Assisted-Learning
-	url = https://github.com/dem123456789/Gradient-Assisted-Learning.git
 [submodule "DRASIC-Distributed-Recurrent-Autoencoder-for-Scalable-Image-Compression"]
 	path = DRASIC-Distributed-Recurrent-Autoencoder-for-Scalable-Image-Compression
 	url = https://github.com/dem123456789/DRASIC-Distributed-Recurrent-Autoencoder-for-Scalable-Image-Compression.git
 [submodule "HeteroFL-Computation-and-Communication-Efficient-Federated-Learning-for-Heterogeneous-Clients"]
 	path = HeteroFL-Computation-and-Communication-Efficient-Federated-Learning-for-Heterogeneous-Clients
 	url = https://github.com/dem123456789/HeteroFL-Computation-and-Communication-Efficient-Federated-Learning-for-Heterogeneous-Clients.git
-[submodule "SemiFL-Communication-Efficient-Semi-Supervised-Federated-Learning-with-Unlabeled-Clients"]
-	path = SemiFL-Communication-Efficient-Semi-Supervised-Federated-Learning-with-Unlabeled-Clients
-	url = https://github.com/dem123456789/SemiFL-Communication-Efficient-Semi-Supervised-Federated-Learning-with-Unlabeled-Clients.git
 [submodule "Transistor-Aging"]
 	path = Transistor-Aging
 	url = https://github.com/dem123456789/Transistor-Aging.git
