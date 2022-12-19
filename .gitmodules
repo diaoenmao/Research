@@ -133,3 +133,6 @@
 [submodule "GAL-Gradient-Assisted-Learning-for-Decentralized-Multi-Organization-Collaborations"]
 	path = GAL-Gradient-Assisted-Learning-for-Decentralized-Multi-Organization-Collaborations
 	url = https://github.com/dem123456789/GAL-Gradient-Assisted-Learning-for-Decentralized-Multi-Organization-Collaborations
+[submodule "Deep-Voice-Conversion"]
+	path = Deep-Voice-Conversion
+	url = https://github.com/dem123456789/Deep-Voice-Conversion.git
