@@ -43,3 +43,6 @@
 [submodule "Quickest-Change-Detection-for-Unnormalized-Statistical-Models"]
 	path = Quickest-Change-Detection-for-Unnormalized-Statistical-Models
 	url = https://github.com/suuyawu/Quickest-Change-Detection-for-Unnormalized-Statistical-Models.git
+[submodule "Pruning-Deep-Neural-Networks-from-a-Sparsity-Perspective"]
+	path = Pruning-Deep-Neural-Networks-from-a-Sparsity-Perspective
+	url = https://github.com/diaoenmao/Pruning-Deep-Neural-Networks-from-a-Sparsity-Perspective.git
