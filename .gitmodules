@@ -1,138 +1,40 @@
-[submodule "Multimodality"]
-	path = Multimodality
-	url = https://github.com/dem123456789/Multimodality.git
-[submodule "Hierarchical-Classification"]
-	path = Hierarchical-Classification
-	url = https://github.com/dem123456789/Hierarchical-Classification.git
-[submodule "Organic"]
-	path = Organic
-	url = https://github.com/dem123456789/Organic.git
-[submodule "Fine-Grained-Classification"]
-	path = Fine-Grained-Classification
-	url = https://github.com/dem123456789/Fine-Grained-Classification.git
-[submodule "Deep-Channel-Coding"]
-	path = Deep-Channel-Coding
-	url = https://github.com/dem123456789/Deep-Channel-Coding.git
-[submodule "Deep-Fractal-Neural-Network"]
-	path = Deep-Fractal-Neural-Network
-	url = https://github.com/dem123456789/Deep-Fractal-Neural-Network.git
+[submodule "RPipe"]
+	path = RPipe
+	url = https://github.com/dem123456789/RPipe.git
 [submodule "Restricted-Recurrent-Neural-Networks"]
 	path = Restricted-Recurrent-Neural-Networks
 	url = https://github.com/dem123456789/Restricted-Recurrent-Neural-Networks.git
-[submodule "Neural-Network-on-Finite-Field"]
-	path = Neural-Network-on-Finite-Field
-	url = https://github.com/dem123456789/Neural-Network-on-Finite-Field.git
-[submodule "Deep-Source-Coding"]
-	path = Deep-Source-Coding
-	url = https://github.com/dem123456789/Deep-Source-Coding.git
-[submodule "Deep-Model-Compression"]
-	path = Deep-Model-Compression
-	url = https://github.com/dem123456789/Deep-Model-Compression.git
-[submodule "Autoregressive-Image-Generation"]
-	path = Autoregressive-Image-Generation
-	url = https://github.com/dem123456789/Autoregressive-Image-Generation.git
-[submodule "Distributed-Audio-Compression"]
-	path = Distributed-Audio-Compression
-	url = https://github.com/dem123456789/Distributed-Audio-Compression.git
 [submodule "Multimodal-Controller-for-Generative-Models"]
 	path = Multimodal-Controller-for-Generative-Models
 	url = https://github.com/dem123456789/Multimodal-Controller-for-Generative-Models.git
-[submodule "Neural-Wavelet-for-Pitch-Tracking"]
-	path = Neural-Wavelet-for-Pitch-Tracking
-	url = https://github.com/dem123456789/Neural-Wavelet-for-Pitch-Tracking.git
-[submodule "Text-to-Speech-Synthesis"]
-	path = Text-to-Speech-Synthesis
-	url = https://github.com/dem123456789/Text-to-Speech-Synthesis.git
-[submodule "Multimodal-Controlled-Text-Generation"]
-	path = Multimodal-Controlled-Text-Generation
-	url = https://github.com/dem123456789/Multimodal-Controlled-Text-Generation.git
-[submodule "Deep-Hacker"]
-	path = Deep-Hacker
-	url = https://github.com/dem123456789/Deep-Hacker.git
-[submodule "Multimodal-Controlled-Audio-Generation"]
-	path = Multimodal-Controlled-Audio-Generation
-	url = https://github.com/dem123456789/Multimodal-Controlled-Audio-Generation.git
 [submodule "Speech-Emotion-Recognition-with-Dual-Sequence-LSTM-Architecture"]
 	path = Speech-Emotion-Recognition-with-Dual-Sequence-LSTM-Architecture
 	url = https://github.com/dem123456789/Speech-Emotion-Recognition-with-Dual-Sequence-LSTM-Architecture.git
 [submodule "On-Statistical-Efficiency-in-Learning"]
 	path = On-Statistical-Efficiency-in-Learning
 	url = https://github.com/dem123456789/On-Statistical-Efficiency-in-Learning.git
-[submodule "Structrual-GAN"]
-	path = Structrual-GAN
-	url = https://github.com/dem123456789/Structrual-GAN.git
 [submodule "Deep-Clustering-of-Compressed-Variational-Embeddings"]
 	path = Deep-Clustering-of-Compressed-Variational-Embeddings
 	url = https://github.com/dem123456789/Deep-Clustering-of-Compressed-Variational-Embeddings.git
-[submodule "Deep-Adversarial-Attacks"]
-	path = Deep-Adversarial-Attacks
-	url = https://github.com/dem123456789/Deep-Adversarial-Attacks.git
-[submodule "SmartQuake"]
-	path = SmartQuake
-	url = https://github.com/dem123456789/SmartQuake.git
 [submodule "DRASIC-Distributed-Recurrent-Autoencoder-for-Scalable-Image-Compression"]
 	path = DRASIC-Distributed-Recurrent-Autoencoder-for-Scalable-Image-Compression
 	url = https://github.com/dem123456789/DRASIC-Distributed-Recurrent-Autoencoder-for-Scalable-Image-Compression.git
 [submodule "HeteroFL-Computation-and-Communication-Efficient-Federated-Learning-for-Heterogeneous-Clients"]
 	path = HeteroFL-Computation-and-Communication-Efficient-Federated-Learning-for-Heterogeneous-Clients
 	url = https://github.com/dem123456789/HeteroFL-Computation-and-Communication-Efficient-Federated-Learning-for-Heterogeneous-Clients.git
-[submodule "Transistor-Aging"]
-	path = Transistor-Aging
-	url = https://github.com/dem123456789/Transistor-Aging.git
-[submodule "DAFL-Communication-Efficient-Federated-Domain-Adaptation-with-Unlabeled-Target-Clients"]
-	path = DAFL-Communication-Efficient-Federated-Domain-Adaptation-with-Unlabeled-Target-Clients
-	url = https://github.com/dem123456789/DAFL-Communication-Efficient-Federated-Domain-Adaptation-with-Unlabeled-Target-Clients.git
-[submodule "Privacy-Preserving-Multi-Target-Multi-Domain-Recommender-Systems-with-Assisted-AutoEncoders"]
-	path = Privacy-Preserving-Multi-Target-Multi-Domain-Recommender-Systems-with-Assisted-AutoEncoders
-	url = https://github.com/dem123456789/Privacy-Preserving-Multi-Target-Multi-Domain-Recommender-Systems-with-Assisted-AutoEncoders.git
 [submodule "Emulating-Spatio-Temporal-Realizations-of-Three-Dimensional-Isotropic-Turbulence-via-Deep-Sequence"]
 	path = Emulating-Spatio-Temporal-Realizations-of-Three-Dimensional-Isotropic-Turbulence-via-Deep-Sequence
 	url = https://github.com/MReza89/Emulating-Spatio-Temporal-Realizations-of-Three-Dimensional-Isotropic-Turbulence-via-Deep-Sequence.git
 [submodule "Dimension-Reduced-Turbulent-Flow-Data-From-Deep-Vector-Quantizers"]
 	path = Dimension-Reduced-Turbulent-Flow-Data-From-Deep-Vector-Quantizers
 	url = https://github.com/dem123456789/Dimension-Reduced-Turbulent-Flow-Data-From-Deep-Vector-Quantizers.git
-[submodule "Sparsity-Index-for-Deep-Model-Compression"]
-	path = Sparsity-Index-for-Deep-Model-Compression
-	url = https://github.com/dem123456789/Sparsity-Index-for-Deep-Model-Compression.git
-[submodule "Assisted-Supply-Chain-Forecasting"]
-	path = Assisted-Supply-Chain-Forecasting
-	url = https://github.com/dem123456789/Assisted-Supply-Chain-Forecasting.git
-[submodule "Federated-Client-Selection"]
-	path = Federated-Client-Selection
-	url = https://github.com/dem123456789/Federated-Client-Selection.git
 [submodule "Semi-Supervised-Federated-Learing-for-Keyword-Spotting"]
 	path = Semi-Supervised-Federated-Learing-for-Keyword-Spotting
 	url = https://github.com/dem123456789/Semi-Supervised-Federated-Learing-for-Keyword-Spotting.git
-[submodule "Medical-Federated-Learning"]
-	path = Medical-Federated-Learning
-	url = https://github.com/dem123456789/Medical-Federated-Learning.git
-[submodule "Deep-Audio-Signal-Coding"]
-	path = Deep-Audio-Signal-Coding
-	url = https://github.com/dem123456789/Deep-Audio-Signal-Coding.git
-[submodule "Deep-Speech-Emotion-Recognition"]
-	path = Deep-Speech-Emotion-Recognition
-	url = https://github.com/dem123456789/Deep-Speech-Emotion-Recognition.git
-[submodule "Semi-Supervised-Learning"]
-	path = Semi-Supervised-Learning
-	url = https://github.com/dem123456789/Semi-Supervised-Learning.git
-[submodule "DynamicFL"]
-	path = DynamicFL
-	url = https://github.com/dem123456789/DynamicFL.git
-[submodule "Recommender-Systems-with-Autoencoders"]
-	path = Recommender-Systems-with-Autoencoders
-	url = https://github.com/dem123456789/Recommender-Systems-with-Autoencoders.git
-[submodule "AutoAL"]
-	path = AutoAL
-	url = https://github.com/dem123456789/AutoAL.git
-[submodule "RPipe"]
-	path = RPipe
-	url = https://github.com/dem123456789/RPipe.git
+
 [submodule "SemiFL-Semi-Supervised-Federated-Learning-for-Unlabeled-Clients-with-Alternate-Training"]
 	path = SemiFL-Semi-Supervised-Federated-Learning-for-Unlabeled-Clients-with-Alternate-Training
 	url = https://github.com/dem123456789/SemiFL-Semi-Supervised-Federated-Learning-for-Unlabeled-Clients-with-Alternate-Training
 [submodule "GAL-Gradient-Assisted-Learning-for-Decentralized-Multi-Organization-Collaborations"]
 	path = GAL-Gradient-Assisted-Learning-for-Decentralized-Multi-Organization-Collaborations
 	url = https://github.com/dem123456789/GAL-Gradient-Assisted-Learning-for-Decentralized-Multi-Organization-Collaborations
-[submodule "Deep-Voice-Conversion"]
-	path = Deep-Voice-Conversion
-	url = https://github.com/dem123456789/Deep-Voice-Conversion.git
