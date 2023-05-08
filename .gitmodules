@@ -1,36 +1,36 @@
 [submodule "RPipe"]
 	path = RPipe
-	url = https://github.com/dem123456789/RPipe.git
+	url = https://github.com/diaoenmao/RPipe.git
 [submodule "Restricted-Recurrent-Neural-Networks"]
 	path = Restricted-Recurrent-Neural-Networks
-	url = https://github.com/dem123456789/Restricted-Recurrent-Neural-Networks.git
+	url = https://github.com/diaoenmao/Restricted-Recurrent-Neural-Networks.git
 [submodule "Multimodal-Controller-for-Generative-Models"]
 	path = Multimodal-Controller-for-Generative-Models
-	url = https://github.com/dem123456789/Multimodal-Controller-for-Generative-Models.git
+	url = https://github.com/diaoenmao/Multimodal-Controller-for-Generative-Models.git
 [submodule "On-Statistical-Efficiency-in-Learning"]
 	path = On-Statistical-Efficiency-in-Learning
-	url = https://github.com/dem123456789/On-Statistical-Efficiency-in-Learning.git
+	url = https://github.com/diaoenmao/On-Statistical-Efficiency-in-Learning.git
 [submodule "Deep-Clustering-of-Compressed-Variational-Embeddings"]
 	path = Deep-Clustering-of-Compressed-Variational-Embeddings
-	url = https://github.com/dem123456789/Deep-Clustering-of-Compressed-Variational-Embeddings.git
+	url = https://github.com/diaoenmao/Deep-Clustering-of-Compressed-Variational-Embeddings.git
 [submodule "DRASIC-Distributed-Recurrent-Autoencoder-for-Scalable-Image-Compression"]
 	path = DRASIC-Distributed-Recurrent-Autoencoder-for-Scalable-Image-Compression
-	url = https://github.com/dem123456789/DRASIC-Distributed-Recurrent-Autoencoder-for-Scalable-Image-Compression.git
+	url = https://github.com/diaoenmao/DRASIC-Distributed-Recurrent-Autoencoder-for-Scalable-Image-Compression.git
 [submodule "HeteroFL-Computation-and-Communication-Efficient-Federated-Learning-for-Heterogeneous-Clients"]
 	path = HeteroFL-Computation-and-Communication-Efficient-Federated-Learning-for-Heterogeneous-Clients
-	url = https://github.com/dem123456789/HeteroFL-Computation-and-Communication-Efficient-Federated-Learning-for-Heterogeneous-Clients.git
+	url = https://github.com/diaoenmao/HeteroFL-Computation-and-Communication-Efficient-Federated-Learning-for-Heterogeneous-Clients.git
 [submodule "Emulating-Spatio-Temporal-Realizations-of-Three-Dimensional-Isotropic-Turbulence-via-Deep-Sequence"]
 	path = Emulating-Spatio-Temporal-Realizations-of-Three-Dimensional-Isotropic-Turbulence-via-Deep-Sequence
 	url = https://github.com/MReza89/Emulating-Spatio-Temporal-Realizations-of-Three-Dimensional-Isotropic-Turbulence-via-Deep-Sequence.git
 [submodule "Dimension-Reduced-Turbulent-Flow-Data-From-Deep-Vector-Quantizers"]
 	path = Dimension-Reduced-Turbulent-Flow-Data-From-Deep-Vector-Quantizers
-	url = https://github.com/dem123456789/Dimension-Reduced-Turbulent-Flow-Data-From-Deep-Vector-Quantizers.git
+	url = https://github.com/diaoenmao/Dimension-Reduced-Turbulent-Flow-Data-From-Deep-Vector-Quantizers.git
 [submodule "Semi-Supervised-Federated-Learing-for-Keyword-Spotting"]
 	path = Semi-Supervised-Federated-Learing-for-Keyword-Spotting
-	url = https://github.com/dem123456789/Semi-Supervised-Federated-Learing-for-Keyword-Spotting.git
+	url = https://github.com/diaoenmao/Semi-Supervised-Federated-Learing-for-Keyword-Spotting.git
 [submodule "SemiFL-Semi-Supervised-Federated-Learning-for-Unlabeled-Clients-with-Alternate-Training"]
 	path = SemiFL-Semi-Supervised-Federated-Learning-for-Unlabeled-Clients-with-Alternate-Training
-	url = https://github.com/dem123456789/SemiFL-Semi-Supervised-Federated-Learning-for-Unlabeled-Clients-with-Alternate-Training
+	url = https://github.com/diaoenmao/SemiFL-Semi-Supervised-Federated-Learning-for-Unlabeled-Clients-with-Alternate-Training
 [submodule "GAL-Gradient-Assisted-Learning-for-Decentralized-Multi-Organization-Collaborations"]
 	path = GAL-Gradient-Assisted-Learning-for-Decentralized-Multi-Organization-Collaborations
-	url = https://github.com/dem123456789/GAL-Gradient-Assisted-Learning-for-Decentralized-Multi-Organization-Collaborations
+	url = https://github.com/diaoenmao/GAL-Gradient-Assisted-Learning-for-Decentralized-Multi-Organization-Collaborations
