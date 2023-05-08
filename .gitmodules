@@ -46,3 +46,6 @@
 [submodule "Pruning-Deep-Neural-Networks-from-a-Sparsity-Perspective"]
 	path = Pruning-Deep-Neural-Networks-from-a-Sparsity-Perspective
 	url = https://github.com/diaoenmao/Pruning-Deep-Neural-Networks-from-a-Sparsity-Perspective.git
+[submodule "Personalized-Federated-Recommender-Systems-with-Private-and-Partially-Federated-AutoEncoders"]
+	path = Personalized-Federated-Recommender-Systems-with-Private-and-Partially-Federated-AutoEncoders
+	url = https://github.com/diaoenmao/Personalized-Federated-Recommender-Systems-with-Private-and-Partially-Federated-AutoEncoders.git
