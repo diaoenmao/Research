@@ -7,9 +7,6 @@
 [submodule "Multimodal-Controller-for-Generative-Models"]
 	path = Multimodal-Controller-for-Generative-Models
 	url = https://github.com/dem123456789/Multimodal-Controller-for-Generative-Models.git
-[submodule "Speech-Emotion-Recognition-with-Dual-Sequence-LSTM-Architecture"]
-	path = Speech-Emotion-Recognition-with-Dual-Sequence-LSTM-Architecture
-	url = https://github.com/dem123456789/Speech-Emotion-Recognition-with-Dual-Sequence-LSTM-Architecture.git
 [submodule "On-Statistical-Efficiency-in-Learning"]
 	path = On-Statistical-Efficiency-in-Learning
 	url = https://github.com/dem123456789/On-Statistical-Efficiency-in-Learning.git
