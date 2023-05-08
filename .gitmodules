@@ -34,3 +34,12 @@
 [submodule "GAL-Gradient-Assisted-Learning-for-Decentralized-Multi-Organization-Collaborations"]
 	path = GAL-Gradient-Assisted-Learning-for-Decentralized-Multi-Organization-Collaborations
 	url = https://github.com/diaoenmao/GAL-Gradient-Assisted-Learning-for-Decentralized-Multi-Organization-Collaborations
+[submodule "Speech-Emotion-Recognition-with-Dual-Sequence-LSTM-Architecture"]
+	path = Speech-Emotion-Recognition-with-Dual-Sequence-LSTM-Architecture
+	url = https://github.com/diaoenmao/Speech-Emotion-Recognition-with-Dual-Sequence-LSTM-Architecture.git
+[submodule "Score-based-Hypothesis-Testing-for-Unnormalized-Models"]
+	path = Score-based-Hypothesis-Testing-for-Unnormalized-Models
+	url = https://github.com/suuyawu/Score-based-Hypothesis-Testing-for-Unnormalized-Models.git
+[submodule "Quickest-Change-Detection-for-Unnormalized-Statistical-Models"]
+	path = Quickest-Change-Detection-for-Unnormalized-Statistical-Models
+	url = https://github.com/suuyawu/Quickest-Change-Detection-for-Unnormalized-Statistical-Models.git
