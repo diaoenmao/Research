@@ -1,0 +1,114 @@
+# install cuda driver
+# https://docs.microsoft.com/en-us/azure/virtual-machines/linux/n-series-driver-setup
+lspci | grep -i NVIDIA
+CUDA_REPO_PKG=cuda-repo-ubuntu1804_10.2.89-1_amd64.deb
+wget -O /tmp/${CUDA_REPO_PKG} http://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64/${CUDA_REPO_PKG} 
+sudo dpkg -i /tmp/${CUDA_REPO_PKG}
+sudo apt-key adv --fetch-keys http://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64/7fa2af80.pub 
+rm -f /tmp/${CUDA_REPO_PKG}
+sudo apt-get update
+sudo apt-get install cuda-drivers
+sudo reboot
+
+# update cuda driver
+sudo apt-get update
+sudo apt-get upgrade -y
+sudo apt-get dist-upgrade -y
+sudo apt-get install cuda-drivers
+sudo reboot
+
+# verify cuda driver installation
+nvidia-smi
+
+# Install Anaconda
+# Type yes for add to PATH
+wget https://repo.anaconda.com/archive/Anaconda3-2021.11-Linux-x86_64.sh
+bash Anaconda3-2021.11-Linux-x86_64.sh
+source .bashrc
+
+# install pytorch
+conda install pytorch torchvision cudatoolkit=10.2 -c pytorch
+
+# other packages
+conda install opencv
+pip install pycocotools
+
+# ssh into an instance
+ssh -v -i <path to pem file> ubuntu@<Public IP>
+
+# copy file from local computer to instance
+scp -i <path to pem file> -r <path to local file (sh)> ubuntu@<Public IP>:<path to destination on aws instance>
+
+# add read and write permisson to mount device
+sudo chmod -R 777 /scratch
+
+# create symbolic linke
+ln -s /scratch/data ./data
+ln -s /scratch/output ./output
+
+# Zip and Unzip
+sudo apt-get install zip
+sudo apt-get install unzip
+
+# Check file size
+du -sh ./*
+# Check only directory size
+du -sh ./*/
+$ Check disk size
+df -h
+
+# Kill all GPU processes
+nvidia-smi | grep 'python' | awk '{ print $5 }' | xargs -n1 kill -9
+
+# Kill all screen
+screen -ls | grep Detached | cut -d. -f1 | awk '{print $1}' | xargs kill
+
+# Check owener of a process
+ps -o user= -p PID
+
+# useful packages
+sudo apt-get install dos2unix
+dos2unix run.sh # solve $'\r': command not found
+
+#Azure
+##Manage Disks
+https://docs.microsoft.com/en-us/azure/virtual-machines/linux/attach-disk-portal
+
+# Duke
+ssh ed155@dcc-slogin.oit.duke.edu
+ssh -i ./ssh/id_rsa ed155@research-tarokhlab-04.oit.duke.edu
+scp -i ./ssh/id_rsa src.zip ed155@research-tarokhlab-04.oit.duke.edu:.
+scp ed155@research-tarokhlab-04.oit.duke.edu:/scratch/ed155/output/duke04.zip .
+srun -p gpu-common --gtmuxres=gpu:1 -c 1 --pty bash -i
+
+# Tensorboard
+## Local
+ssh -N -f -L localhost:16006:localhost:6006 ed155@research-tarokhlab-01.oit.duke.edu
+## Server
+tensorboard --logdir output/runs --port 6006
+## Navigate to http://localhost:16006 on local machine
+
+#VPN
+sudo apt-get install network-manager-openconnect network-manager-openconnect-gnome openconnect
+
+CUDA_VISIBLE_DEVICES="0" python train_model.py 
+bash train_model.sh > train_model.txt 2>&1
+
+bundle exec jekyll liveserve --watch --force-polling
+
+$ match all but make.sh
+$ shopt -s extglob
+set +H
+ls | grep -P "^(?!.*(make)).*sh$" | xargs -d"\n" rm
+
+# Kill all screens
+
+screen -ls | grep Detached | cut -d. -f1 | awk '{print $1}' | xargs kill
+
+$ Check owner of PID
+ps -o user= -p PID
+
+$ count how many files in directory
+ls -1 | wc -l
+
+scp -r model ed155@research-tarokhlab-06:/scratch/ed155/output

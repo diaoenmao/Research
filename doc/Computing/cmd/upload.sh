@@ -1,0 +1,1 @@
+scp -i ./ssh/id_rsa src.zip ed155@research-tarokhlab-04.oit.duke.edu:.

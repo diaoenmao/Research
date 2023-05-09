@@ -1,0 +1,8 @@
+ssh -i ./ssh/id_rsa ed155@research-tarokhlab-04.oit.duke.edu "zip /scratch/ed155/output/ks_fs.zip -r /scratch/ed155/output/ks_fs/result"
+ssh -i ./ssh/id_rsa ed155@research-tarokhlab-04.oit.duke.edu "zip /scratch/ed155/output/ks_fl.zip -r /scratch/ed155/output/ks_fl/result"
+ssh -i ./ssh/id_rsa ed155@research-tarokhlab-05.oit.duke.edu "zip /scratch/ed155/output/ks_ps.zip -r /scratch/ed155/output/ks_ps/result"
+ssh -i ./ssh/id_rsa ed155@research-tarokhlab-05.oit.duke.edu "zip /scratch/ed155/output/ks_semi.zip -r /scratch/ed155/output/ks_semi/result"
+ssh -i ./ssh/id_rsa ed155@research-tarokhlab-05.oit.duke.edu "zip /scratch/ed155/output/ks_semi-aug_1.zip -r /scratch/ed155/output/ks_semi-aug_1/result"
+ssh -i ./ssh/id_rsa ed155@research-tarokhlab-05.oit.duke.edu "zip /scratch/ed155/output/ks_semi_loss.zip -r /scratch/ed155/output/ks_semi_loss/result"
+ssh -i ./ssh/id_rsa ed155@research-tarokhlab-06.oit.duke.edu "zip /scratch/ed155/output/ks_semi-aug_2.zip -r /scratch/ed155/output/ks_semi-aug_2/result"
+ssh -i ./ssh/id_rsa ed155@research-tarokhlab-12.oit.duke.edu "zip /scratch/ed155/output/ks_fl-alter.zip -r /scratch/ed155/output/ks_fl-alter/result"
