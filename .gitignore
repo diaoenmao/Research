@@ -113,7 +113,7 @@ ENV/
 ~$*.ppt*
 
 # data
-data/
+data
 
 # model
 model/
@@ -121,3 +121,8 @@ model/
 #output
 output/
 tmp/
+res/
+
+.idea/
+.DS_Store
+
