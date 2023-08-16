@@ -52,3 +52,6 @@
 [submodule "FLPipe"]
 	path = FLPipe
 	url = https://github.com/diaoenmao/FLPipe.git
+[submodule "ALPipe"]
+	path = ALPipe
+	url = https://github.com/diaoenmao/ALPipe.git
