@@ -55,3 +55,6 @@
 [submodule "ALPipe"]
 	path = ALPipe
 	url = https://github.com/diaoenmao/ALPipe.git
+[submodule "PEFTPipe"]
+	path = PEFTPipe
+	url = https://github.com/diaoenmao/PEFTPipe.git
