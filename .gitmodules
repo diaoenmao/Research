@@ -55,3 +55,6 @@
 [submodule "PEFTPipe"]
 	path = PEFTPipe
 	url = https://github.com/diaoenmao/PEFTPipe.git
+[submodule "Decentralized-Multi-Target-Cross-Domain-Recommendation-for-Multi-Organization-Collaborations"]
+	path = Decentralized-Multi-Target-Cross-Domain-Recommendation-for-Multi-Organization-Collaborations
+	url = https://github.com/diaoenmao/Decentralized-Multi-Target-Cross-Domain-Recommendation-for-Multi-Organization-Collaborations.git
