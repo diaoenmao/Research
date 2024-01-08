@@ -42,7 +42,7 @@ scp -i <path to pem file> -r <path to local file (sh)> ubuntu@<Public IP>:<path 
 # add read and write permisson to mount device
 sudo chmod -R 777 /scratch
 
-# create symbolic linke
+# create symbolic link
 ln -s /scratch/data ./data
 ln -s /scratch/output ./output
 
