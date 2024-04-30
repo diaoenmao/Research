@@ -52,3 +52,6 @@
 [submodule "Decentralized-Multi-Target-Cross-Domain-Recommendation-for-Multi-Organization-Collaborations"]
 	path = Decentralized-Multi-Target-Cross-Domain-Recommendation-for-Multi-Organization-Collaborations
 	url = https://github.com/diaoenmao/Decentralized-Multi-Target-Cross-Domain-Recommendation-for-Multi-Organization-Collaborations.git
+[submodule "ColA-Collaborative-Adaptation-with-Gradient-Learning"]
+	path = ColA-Collaborative-Adaptation-with-Gradient-Learning
+	url = https://github.com/diaoenmao/ColA-Collaborative-Adaptation-with-Gradient-Learning
