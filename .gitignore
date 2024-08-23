@@ -115,14 +115,13 @@ ENV/
 # data
 data
 
-# model
-model/
-
 #output
 output/
 tmp/
 res/
 
 .idea/
+.vscode/
 .DS_Store
+scripts/
 
